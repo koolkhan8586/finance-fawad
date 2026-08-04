@@ -7,6 +7,8 @@ import { CreateBookForm } from "@/components/CreateBookForm";
 import { listUsers } from "@/lib/ledger";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   getDb();
   const session = await getSession();

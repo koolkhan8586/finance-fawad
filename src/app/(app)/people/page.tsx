@@ -4,6 +4,8 @@ import { getDb } from "@/lib/db";
 import { listUsers } from "@/lib/ledger";
 import { CreateUserForm } from "@/components/CreateUserForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function PeoplePage() {
   getDb();
   const session = await getSession();

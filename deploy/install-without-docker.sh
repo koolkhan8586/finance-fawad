@@ -13,13 +13,18 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y curl ca-certificates build-essential python3 nginx
 
-if ! command -v node >/dev/null 2>&1 || [[ "$(node -v 2>/dev/null | cut -d. -f1 | tr -d v)" -lt 20 ]]; then
-  echo "==> Installing Node.js 22"
+if ! command -v node >/dev/null 2>&1 || [[ "$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1)" -lt 22 ]]; then
+  echo "==> Installing Node.js 22 (required for better-sqlite3)"
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
 fi
 
 echo "Node $(node -v) / npm $(npm -v)"
+NODE_MAJOR="$(node -v | sed 's/^v//' | cut -d. -f1)"
+if [[ "$NODE_MAJOR" -lt 22 ]]; then
+  echo "ERROR: Node.js 22+ is required. Current: $(node -v)"
+  exit 1
+fi
 
 if [[ ! -f .env ]]; then
   cp .env.example .env
@@ -38,6 +43,7 @@ if grep -qE '^ADMIN_NAME=[^"].*[[:space:]]' .env; then
 fi
 
 echo "==> Installing npm packages"
+rm -rf node_modules
 npm ci
 
 echo "==> Building Next.js app"

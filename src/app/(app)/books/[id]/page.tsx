@@ -14,6 +14,8 @@ import { AddTransactionForm } from "@/components/AddTransactionForm";
 import { DeleteTransactionButton } from "@/components/DeleteTransactionButton";
 import { format } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 export default async function BookPage({
   params,
 }: {
