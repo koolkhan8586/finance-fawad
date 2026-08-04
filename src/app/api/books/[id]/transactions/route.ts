@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth";
-import { addTransaction, deleteTransaction, updateTransaction, userCanAccessBook } from "@/lib/ledger";
+import {
+  addTransaction,
+  deleteTransaction,
+  listTransactions,
+  updateTransaction,
+  userCanAccessBook,
+} from "@/lib/ledger";
 import { getDb } from "@/lib/db";
+import { notifyBookMembers } from "@/lib/notify";
 
 const createSchema = z.object({
   type: z.enum(["gave", "received", "expense", "settlement", "adjustment"]),
@@ -66,6 +73,18 @@ export async function POST(
       splitWithUserId: data.splitWithUserId,
     });
 
+    void notifyBookMembers({
+      bookId,
+      actorUserId: session.userId,
+      action: "added",
+      transaction: {
+        type: data.type,
+        amount: data.amount,
+        currency: data.currency || "PKR",
+        description: data.description || null,
+      },
+    });
+
     return NextResponse.json({ id: txId }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";
@@ -121,6 +140,18 @@ export async function PATCH(
       return NextResponse.json({ error: "Entry not found." }, { status: 404 });
     }
 
+    void notifyBookMembers({
+      bookId,
+      actorUserId: session.userId,
+      action: "updated",
+      transaction: {
+        type: data.type,
+        amount: data.amount,
+        currency: data.currency || "PKR",
+        description: data.description || null,
+      },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";
@@ -152,7 +183,23 @@ export async function DELETE(
       return NextResponse.json({ error: "Transaction id required." }, { status: 400 });
     }
 
+    const existing = listTransactions(bookId).find((t) => t.id === parsed.data.transactionId);
     deleteTransaction(parsed.data.transactionId, bookId);
+
+    if (existing) {
+      void notifyBookMembers({
+        bookId,
+        actorUserId: session.userId,
+        action: "deleted",
+        transaction: {
+          type: existing.type,
+          amount: existing.amount,
+          currency: existing.currency,
+          description: existing.description,
+        },
+      });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";

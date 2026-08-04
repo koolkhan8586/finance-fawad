@@ -55,7 +55,7 @@ export function authenticateUser(username: string, password: string): User | nul
   const db = getDb();
   const row = db
     .prepare(
-      `SELECT id, username, name, role, created_at, password_hash
+      `SELECT id, username, name, role, email, whatsapp_phone, whatsapp_apikey, created_at, password_hash
        FROM users WHERE username = ? COLLATE NOCASE`
     )
     .get(username.trim()) as
@@ -70,6 +70,9 @@ export function authenticateUser(username: string, password: string): User | nul
     username: row.username,
     name: row.name,
     role: row.role,
+    email: row.email,
+    whatsapp_phone: row.whatsapp_phone,
+    whatsapp_apikey: row.whatsapp_apikey,
     created_at: row.created_at,
   };
 }

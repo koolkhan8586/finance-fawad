@@ -12,6 +12,9 @@ export interface User {
   username: string;
   name: string;
   role: UserRole;
+  email: string | null;
+  whatsapp_phone: string | null;
+  whatsapp_apikey: string | null;
   created_at: string;
 }
 
@@ -28,6 +31,9 @@ export interface BookMember {
   user_id: number;
   name: string;
   username: string;
+  email?: string | null;
+  whatsapp_phone?: string | null;
+  whatsapp_apikey?: string | null;
 }
 
 export interface Transaction {

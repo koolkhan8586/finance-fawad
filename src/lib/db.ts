@@ -14,6 +14,23 @@ function resolveDbPath() {
   return path.join(dataDir, "musa.db");
 }
 
+function columnExists(db: Database.Database, table: string, column: string) {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return rows.some((r) => r.name === column);
+}
+
+function migrate(db: Database.Database) {
+  if (!columnExists(db, "users", "email")) {
+    db.exec(`ALTER TABLE users ADD COLUMN email TEXT`);
+  }
+  if (!columnExists(db, "users", "whatsapp_phone")) {
+    db.exec(`ALTER TABLE users ADD COLUMN whatsapp_phone TEXT`);
+  }
+  if (!columnExists(db, "users", "whatsapp_apikey")) {
+    db.exec(`ALTER TABLE users ADD COLUMN whatsapp_apikey TEXT`);
+  }
+}
+
 function createDb() {
   const dbPath = resolveDbPath();
   const db = new Database(dbPath);
@@ -27,6 +44,9 @@ function createDb() {
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin', 'member')),
+      email TEXT,
+      whatsapp_phone TEXT,
+      whatsapp_apikey TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -64,6 +84,7 @@ function createDb() {
     CREATE INDEX IF NOT EXISTS idx_book_members_user ON book_members(user_id);
   `);
 
+  migrate(db);
   seedAdmin(db);
   return db;
 }

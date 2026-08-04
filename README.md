@@ -94,12 +94,21 @@ nano .env
 docker compose up -d --build
 ```
 
-## First-time setup on the live site
+## Notifications (WhatsApp free → email fallback)
 
-1. Sign in as admin (from `.env`)
-2. **People** → create logins for brother and friend
-3. **Books** → create a shared book with each person
-4. Share their username/password privately
-5. Add entries: gave / received / shared expense
+When someone adds/edits/deletes an entry, other members of that book can get an alert:
 
-Data lives in `./data/musa.db` (or `DATABASE_PATH`). Back that file up regularly.
+1. **WhatsApp (free)** via [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/)
+   - Each person activates the bot once and gets an API key
+   - On **People → Edit**, set WhatsApp phone (`+92…`) + API key
+2. **Email fallback** if WhatsApp is missing/fails — set SMTP in `.env`:
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM="Loan <you@gmail.com>"
+```
+
+Paid WhatsApp Business API is not required for this free setup.
