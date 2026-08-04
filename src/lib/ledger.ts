@@ -181,6 +181,50 @@ export function deleteTransaction(id: number, bookId: number) {
   return db.prepare(`DELETE FROM transactions WHERE id = ? AND book_id = ?`).run(id, bookId);
 }
 
+export function updateTransaction(input: {
+  id: number;
+  bookId: number;
+  type: Transaction["type"];
+  amount: number;
+  currency?: string;
+  description?: string;
+  occurredOn: string;
+  fromUserId?: number | null;
+  toUserId?: number | null;
+  paidByUserId?: number | null;
+  splitWithUserId?: number | null;
+}) {
+  const db = getDb();
+  const result = db
+    .prepare(
+      `UPDATE transactions SET
+         type = ?,
+         amount = ?,
+         currency = ?,
+         description = ?,
+         occurred_on = ?,
+         from_user_id = ?,
+         to_user_id = ?,
+         paid_by_user_id = ?,
+         split_with_user_id = ?
+       WHERE id = ? AND book_id = ?`
+    )
+    .run(
+      input.type,
+      input.amount,
+      input.currency || "PKR",
+      input.description?.trim() || null,
+      input.occurredOn,
+      input.fromUserId ?? null,
+      input.toUserId ?? null,
+      input.paidByUserId ?? null,
+      input.splitWithUserId ?? null,
+      input.id,
+      input.bookId
+    );
+  return result.changes > 0;
+}
+
 /**
  * Balance for user A relative to others in the book:
  * positive = others owe A; negative = A owes others.

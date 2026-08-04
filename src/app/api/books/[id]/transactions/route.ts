@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth";
-import { addTransaction, deleteTransaction, userCanAccessBook } from "@/lib/ledger";
+import { addTransaction, deleteTransaction, updateTransaction, userCanAccessBook } from "@/lib/ledger";
 import { getDb } from "@/lib/db";
 
 const createSchema = z.object({
@@ -15,6 +15,17 @@ const createSchema = z.object({
   paidByUserId: z.number().int().positive().nullable().optional(),
   splitWithUserId: z.number().int().positive().nullable().optional(),
 });
+
+function validateParties(data: z.infer<typeof createSchema>) {
+  if (data.type === "expense") {
+    if (!data.paidByUserId || !data.splitWithUserId) {
+      return "Shared expense needs who paid and who shares.";
+    }
+  } else if (!data.fromUserId || !data.toUserId) {
+    return "From and to people are required.";
+  }
+  return null;
+}
 
 export async function POST(
   request: Request,
@@ -35,21 +46,12 @@ export async function POST(
       return NextResponse.json({ error: "Invalid transaction." }, { status: 400 });
     }
 
-    const data = parsed.data;
-    if (data.type === "expense") {
-      if (!data.paidByUserId || !data.splitWithUserId) {
-        return NextResponse.json(
-          { error: "Shared expense needs who paid and who shares." },
-          { status: 400 }
-        );
-      }
-    } else if (!data.fromUserId || !data.toUserId) {
-      return NextResponse.json(
-        { error: "From and to people are required." },
-        { status: 400 }
-      );
+    const partyError = validateParties(parsed.data);
+    if (partyError) {
+      return NextResponse.json({ error: partyError }, { status: 400 });
     }
 
+    const data = parsed.data;
     const txId = addTransaction({
       bookId,
       type: data.type,
@@ -69,6 +71,61 @@ export async function POST(
     const msg = e instanceof Error ? e.message : "ERROR";
     if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     return NextResponse.json({ error: "Failed to add transaction" }, { status: 500 });
+  }
+}
+
+const updateSchema = createSchema.extend({
+  transactionId: z.number().int().positive(),
+});
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  getDb();
+  try {
+    const session = await requireSession();
+    const { id } = await context.params;
+    const bookId = Number(id);
+    if (!userCanAccessBook(session.userId, session.role, bookId)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const parsed = updateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid transaction." }, { status: 400 });
+    }
+
+    const partyError = validateParties(parsed.data);
+    if (partyError) {
+      return NextResponse.json({ error: partyError }, { status: 400 });
+    }
+
+    const data = parsed.data;
+    const ok = updateTransaction({
+      id: data.transactionId,
+      bookId,
+      type: data.type,
+      amount: data.amount,
+      currency: data.currency,
+      description: data.description,
+      occurredOn: data.occurredOn,
+      fromUserId: data.fromUserId,
+      toUserId: data.toUserId,
+      paidByUserId: data.paidByUserId,
+      splitWithUserId: data.splitWithUserId,
+    });
+
+    if (!ok) {
+      return NextResponse.json({ error: "Entry not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "ERROR";
+    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
   }
 }
 
