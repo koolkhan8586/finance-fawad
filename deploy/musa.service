@@ -4,12 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
 WorkingDirectory=/opt/musa
 EnvironmentFile=/opt/musa/.env
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=0.0.0.0
+Environment=DATABASE_PATH=/opt/musa/data/musa.db
 ExecStart=/usr/bin/npm run start
 Restart=always
 RestartSec=5

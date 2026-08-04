@@ -45,30 +45,31 @@ export default function LoginPage() {
         }}
       />
 
-      <section className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16 lg:px-10">
+      <section className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6 sm:py-16 lg:px-10">
         <div className="max-w-xl">
           <p className="fade-up brand-mark font-[family-name:var(--font-display)] text-5xl leading-none text-[var(--moss-deep)] sm:text-7xl">
-            Musa
+            Loan
           </p>
-          <h1 className="fade-up-delay mt-5 max-w-md font-[family-name:var(--font-display)] text-3xl leading-tight text-[var(--ink)] sm:text-4xl">
+          <h1 className="fade-up-delay mt-4 max-w-md font-[family-name:var(--font-display)] text-2xl leading-tight text-[var(--ink)] sm:mt-5 sm:text-4xl">
             Shared money books for family and friends.
           </h1>
-          <p className="fade-up-delay-2 mt-4 max-w-md text-base leading-relaxed text-[var(--ink-soft)] sm:text-lg">
+          <p className="fade-up-delay-2 mt-3 max-w-md text-[15px] leading-relaxed text-[var(--ink-soft)] sm:mt-4 sm:text-lg">
             Log loans, repayments, and shared expenses — each person sees only their books.
           </p>
         </div>
 
         <form
           onSubmit={onSubmit}
-          className="fade-up-delay-2 surface mt-12 w-full max-w-md rounded-2xl p-6 shadow-[var(--shadow)] sm:p-8"
+          className="fade-up-delay-2 surface mt-8 w-full max-w-md rounded-2xl p-5 shadow-[var(--shadow)] sm:mt-12 sm:p-8"
         >
           <label className="block text-sm font-medium text-[var(--ink-soft)]">
             Username
             <input
-              className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/80 px-4 py-3 outline-none ring-[var(--leaf)] focus:ring-2"
+              className="field"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
+              autoCapitalize="none"
               required
             />
           </label>
@@ -76,7 +77,7 @@ export default function LoginPage() {
             Password
             <input
               type="password"
-              className="mt-2 w-full rounded-xl border border-[var(--line)] bg-white/80 px-4 py-3 outline-none ring-[var(--leaf)] focus:ring-2"
+              className="field"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
@@ -88,11 +89,7 @@ export default function LoginPage() {
               {error}
             </p>
           ) : null}
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-6 w-full rounded-xl bg-[var(--moss)] px-4 py-3 font-semibold text-white transition hover:bg-[var(--moss-deep)] disabled:opacity-60"
-          >
+          <button type="submit" disabled={loading} className="btn-primary mt-6 w-full">
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>

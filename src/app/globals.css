@@ -53,6 +53,7 @@ body {
     radial-gradient(ellipse 60% 40% at 50% 100%, rgba(15, 61, 48, 0.08), transparent 55%),
     linear-gradient(180deg, #f7f4ec 0%, #eef5f0 45%, #f3efe4 100%);
   background-attachment: fixed;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
@@ -65,6 +66,45 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+/* Prevent iOS zoom on focus — keep controls readable on phones */
+input,
+select,
+textarea,
+button {
+  font-size: 16px;
+}
+
+.field {
+  margin-top: 0.4rem;
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.8rem 0.95rem;
+  outline: none;
+}
+
+.field:focus {
+  box-shadow: 0 0 0 2px var(--leaf);
+}
+
+.btn-primary {
+  border-radius: 0.9rem;
+  background: var(--moss);
+  color: white;
+  font-weight: 600;
+  padding: 0.85rem 1rem;
+  transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: var(--moss-deep);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
 }
 
 .surface {
@@ -127,5 +167,11 @@ textarea {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    background-attachment: scroll;
   }
 }

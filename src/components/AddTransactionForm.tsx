@@ -7,6 +7,14 @@ import { todayISODate } from "@/lib/format";
 type Member = { id: number; name: string };
 type TxType = "gave" | "received" | "expense" | "settlement" | "adjustment";
 
+const TYPES: { value: TxType; short: string; full: string }[] = [
+  { value: "gave", short: "Gave", full: "Gave money" },
+  { value: "received", short: "Received", full: "Received" },
+  { value: "expense", short: "Expense", full: "Shared expense" },
+  { value: "settlement", short: "Settle", full: "Settlement" },
+  { value: "adjustment", short: "Adjust", full: "Adjustment" },
+];
+
 export function AddTransactionForm({
   bookId,
   members,
@@ -33,11 +41,11 @@ export function AddTransactionForm({
   const typeHelp = useMemo(() => {
     switch (type) {
       case "gave":
-        return "You (or someone) gave cash/transfer — the receiver now owes that amount.";
+        return "You sent money — they now owe you that amount.";
       case "received":
-        return "Money came back (repayment) or someone sent you money.";
+        return "They paid you back, or sent you money.";
       case "expense":
-        return "One person paid a bill for both; the cost is split 50/50.";
+        return "One person paid a bill; cost is split 50/50.";
       case "settlement":
         return "Someone paid to clear part of what they owed.";
       case "adjustment":
@@ -99,31 +107,24 @@ export function AddTransactionForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="surface rounded-2xl p-5">
+    <form onSubmit={onSubmit} className="surface rounded-2xl p-4 sm:p-5">
       <h2 className="font-[family-name:var(--font-display)] text-xl">Add entry</h2>
-      <p className="mt-1 text-sm text-[var(--ink-soft)]">{typeHelp}</p>
+      <p className="mt-1 text-sm leading-snug text-[var(--ink-soft)]">{typeHelp}</p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {(
-          [
-            ["gave", "Gave money"],
-            ["received", "Received"],
-            ["expense", "Shared expense"],
-            ["settlement", "Settlement"],
-            ["adjustment", "Adjustment"],
-          ] as const
-        ).map(([value, label]) => (
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+        {TYPES.map(({ value, short, full }) => (
           <button
             key={value}
             type="button"
             onClick={() => setType(value)}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
+            className={`min-h-11 rounded-xl px-2 py-2.5 text-sm font-medium sm:min-h-0 sm:rounded-lg sm:px-3 sm:py-1.5 ${
               type === value
                 ? "bg-[var(--moss)] text-white"
                 : "border border-[var(--line)] bg-white/70"
-            }`}
+            } ${value === "adjustment" ? "col-span-3 sm:col-span-1" : ""}`}
           >
-            {label}
+            <span className="sm:hidden">{short}</span>
+            <span className="hidden sm:inline">{full}</span>
           </button>
         ))}
       </div>
@@ -133,11 +134,13 @@ export function AddTransactionForm({
           Amount (PKR)
           <input
             type="number"
+            inputMode="decimal"
             min="0"
             step="0.01"
-            className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+            className="field"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            placeholder="0"
             required
           />
         </label>
@@ -145,7 +148,7 @@ export function AddTransactionForm({
           Date
           <input
             type="date"
-            className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+            className="field"
             value={occurredOn}
             onChange={(e) => setOccurredOn(e.target.value)}
             required
@@ -158,7 +161,7 @@ export function AddTransactionForm({
           <label className="text-sm text-[var(--ink-soft)]">
             Who paid
             <select
-              className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+              className="field"
               value={paidByUserId}
               onChange={(e) => setPaidByUserId(Number(e.target.value))}
             >
@@ -172,7 +175,7 @@ export function AddTransactionForm({
           <label className="text-sm text-[var(--ink-soft)]">
             Split with
             <select
-              className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+              className="field"
               value={splitWithUserId}
               onChange={(e) => setSplitWithUserId(Number(e.target.value))}
             >
@@ -189,7 +192,7 @@ export function AddTransactionForm({
           <label className="text-sm text-[var(--ink-soft)]">
             From
             <select
-              className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+              className="field"
               value={fromUserId}
               onChange={(e) => setFromUserId(Number(e.target.value))}
             >
@@ -203,7 +206,7 @@ export function AddTransactionForm({
           <label className="text-sm text-[var(--ink-soft)]">
             To
             <select
-              className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+              className="field"
               value={toUserId}
               onChange={(e) => setToUserId(Number(e.target.value))}
             >
@@ -220,7 +223,7 @@ export function AddTransactionForm({
       <label className="mt-3 block text-sm text-[var(--ink-soft)]">
         Note (optional)
         <input
-          className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+          className="field"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="JazzCash, dinner, rent help…"
@@ -229,11 +232,7 @@ export function AddTransactionForm({
 
       {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-4 rounded-xl bg-[var(--moss)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--moss-deep)] disabled:opacity-60"
-      >
+      <button type="submit" disabled={loading} className="btn-primary mt-4 w-full sm:w-auto">
         {loading ? "Saving…" : "Save entry"}
       </button>
     </form>
