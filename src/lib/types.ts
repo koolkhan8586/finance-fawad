@@ -40,8 +40,11 @@ export interface Transaction {
   id: number;
   book_id: number;
   type: TransactionType;
+  /** Always PKR — used for balances / totals */
   amount: number;
   currency: string;
+  original_amount: number | null;
+  exchange_rate: number | null;
   description: string | null;
   occurred_on: string;
   created_by: number;

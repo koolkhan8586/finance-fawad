@@ -248,8 +248,11 @@ export function listTransactions(bookId: number): Transaction[] {
 export function addTransaction(input: {
   bookId: number;
   type: Transaction["type"];
+  /** PKR amount used in balances */
   amount: number;
   currency?: string;
+  originalAmount?: number;
+  exchangeRate?: number;
   description?: string;
   occurredOn: string;
   createdBy: number;
@@ -259,18 +262,24 @@ export function addTransaction(input: {
   splitWithUserId?: number | null;
 }) {
   const db = getDb();
+  const currency = input.currency || "PKR";
+  const originalAmount = input.originalAmount ?? input.amount;
+  const exchangeRate = currency === "PKR" ? 1 : input.exchangeRate ?? 1;
   const result = db
     .prepare(
       `INSERT INTO transactions (
-         book_id, type, amount, currency, description, occurred_on, created_by,
+         book_id, type, amount, currency, original_amount, exchange_rate,
+         description, occurred_on, created_by,
          from_user_id, to_user_id, paid_by_user_id, split_with_user_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.bookId,
       input.type,
       input.amount,
-      input.currency || "PKR",
+      currency,
+      originalAmount,
+      exchangeRate,
       input.description?.trim() || null,
       input.occurredOn,
       input.createdBy,
@@ -293,6 +302,8 @@ export function updateTransaction(input: {
   type: Transaction["type"];
   amount: number;
   currency?: string;
+  originalAmount?: number;
+  exchangeRate?: number;
   description?: string;
   occurredOn: string;
   fromUserId?: number | null;
@@ -301,12 +312,17 @@ export function updateTransaction(input: {
   splitWithUserId?: number | null;
 }) {
   const db = getDb();
+  const currency = input.currency || "PKR";
+  const originalAmount = input.originalAmount ?? input.amount;
+  const exchangeRate = currency === "PKR" ? 1 : input.exchangeRate ?? 1;
   const result = db
     .prepare(
       `UPDATE transactions SET
          type = ?,
          amount = ?,
          currency = ?,
+         original_amount = ?,
+         exchange_rate = ?,
          description = ?,
          occurred_on = ?,
          from_user_id = ?,
@@ -318,7 +334,9 @@ export function updateTransaction(input: {
     .run(
       input.type,
       input.amount,
-      input.currency || "PKR",
+      currency,
+      originalAmount,
+      exchangeRate,
       input.description?.trim() || null,
       input.occurredOn,
       input.fromUserId ?? null,

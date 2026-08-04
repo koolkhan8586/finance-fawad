@@ -8,6 +8,7 @@ import {
   formatMoney,
   transactionLabel,
 } from "@/lib/format";
+import { formatFxLine } from "@/lib/currency";
 import {
   AddTransactionForm,
   type EditableTransaction,
@@ -17,7 +18,6 @@ import { DeleteTransactionButton } from "@/components/DeleteTransactionButton";
 type Member = { id: number; name: string };
 
 type TxRow = EditableTransaction & {
-  currency: string;
   created_by_name?: string;
   from_user_name?: string | null;
   to_user_name?: string | null;
@@ -43,6 +43,9 @@ export function BookActivity({
       id: tx.id,
       type: tx.type,
       amount: tx.amount,
+      currency: tx.currency,
+      original_amount: tx.original_amount,
+      exchange_rate: tx.exchange_rate,
       description: tx.description,
       occurred_on: tx.occurred_on,
       from_user_id: tx.from_user_id,
@@ -121,8 +124,21 @@ export function BookActivity({
                       </div>
                       <p className={`mt-1 text-lg font-bold ${amountClass}`}>
                         {flowSign(flow)}
-                        {formatMoney(tx.amount, tx.currency)}
+                        {formatMoney(tx.amount, "PKR")}
                       </p>
+                      {tx.currency &&
+                      tx.currency !== "PKR" &&
+                      tx.original_amount != null &&
+                      tx.exchange_rate != null ? (
+                        <p className="mt-0.5 text-xs font-medium text-[var(--ink-soft)]">
+                          {formatFxLine({
+                            originalAmount: tx.original_amount,
+                            currency: tx.currency,
+                            exchangeRate: tx.exchange_rate,
+                            amountPkr: tx.amount,
+                          })}
+                        </p>
+                      ) : null}
                       <p className="mt-1 text-sm leading-snug text-[var(--ink-soft)]">
                         {describeTx(tx)}
                         {tx.description ? ` — ${tx.description}` : ""}

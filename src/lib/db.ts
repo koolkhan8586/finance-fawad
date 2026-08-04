@@ -29,6 +29,19 @@ function migrate(db: Database.Database) {
   if (!columnExists(db, "users", "whatsapp_apikey")) {
     db.exec(`ALTER TABLE users ADD COLUMN whatsapp_apikey TEXT`);
   }
+  if (!columnExists(db, "transactions", "original_amount")) {
+    db.exec(`ALTER TABLE transactions ADD COLUMN original_amount REAL`);
+  }
+  if (!columnExists(db, "transactions", "exchange_rate")) {
+    db.exec(`ALTER TABLE transactions ADD COLUMN exchange_rate REAL DEFAULT 1`);
+  }
+  // Backfill older rows: treat stored amount as PKR
+  db.exec(`
+    UPDATE transactions
+    SET original_amount = amount,
+        exchange_rate = COALESCE(exchange_rate, 1)
+    WHERE original_amount IS NULL
+  `);
 }
 
 function createDb() {
@@ -70,6 +83,8 @@ function createDb() {
       type TEXT NOT NULL CHECK(type IN ('gave', 'received', 'expense', 'settlement', 'adjustment')),
       amount REAL NOT NULL CHECK(amount >= 0),
       currency TEXT NOT NULL DEFAULT 'PKR',
+      original_amount REAL,
+      exchange_rate REAL DEFAULT 1,
       description TEXT,
       occurred_on TEXT NOT NULL,
       created_by INTEGER NOT NULL REFERENCES users(id),

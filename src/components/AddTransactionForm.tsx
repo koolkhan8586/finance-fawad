@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { todayISODate } from "@/lib/format";
+import { formatMoney, todayISODate } from "@/lib/format";
+import { BASE_CURRENCY, CURRENCIES, toPkr } from "@/lib/currency";
 
 type Member = { id: number; name: string };
 type TxType = "gave" | "received" | "expense" | "settlement" | "adjustment";
@@ -11,6 +12,9 @@ export type EditableTransaction = {
   id: number;
   type: TxType;
   amount: number;
+  currency: string;
+  original_amount: number | null;
+  exchange_rate: number | null;
   description: string | null;
   occurred_on: string;
   from_user_id: number | null;
@@ -46,6 +50,8 @@ export function AddTransactionForm({
 
   const [type, setType] = useState<TxType>("gave");
   const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState(BASE_CURRENCY);
+  const [exchangeRate, setExchangeRate] = useState("");
   const [description, setDescription] = useState("");
   const [occurredOn, setOccurredOn] = useState(todayISODate());
   const [fromUserId, setFromUserId] = useState(currentUserId);
@@ -54,11 +60,19 @@ export function AddTransactionForm({
   const [splitWithUserId, setSplitWithUserId] = useState(other?.id || currentUserId);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rateLoading, setRateLoading] = useState(false);
 
   useEffect(() => {
     if (editing) {
       setType(editing.type);
-      setAmount(String(editing.amount));
+      const orig = editing.original_amount ?? editing.amount;
+      setAmount(String(orig));
+      setCurrency(editing.currency || BASE_CURRENCY);
+      setExchangeRate(
+        editing.currency && editing.currency !== BASE_CURRENCY
+          ? String(editing.exchange_rate || "")
+          : ""
+      );
       setDescription(editing.description || "");
       setOccurredOn(editing.occurred_on);
       setFromUserId(editing.from_user_id || currentUserId);
@@ -70,6 +84,8 @@ export function AddTransactionForm({
     }
     setType("gave");
     setAmount("");
+    setCurrency(BASE_CURRENCY);
+    setExchangeRate("");
     setDescription("");
     setOccurredOn(todayISODate());
     setFromUserId(currentUserId);
@@ -82,11 +98,11 @@ export function AddTransactionForm({
   const typeHelp = useMemo(() => {
     switch (type) {
       case "gave":
-        return "You sent money — they now owe you that amount.";
+        return "You sent money — they now owe you that amount (stored in PKR).";
       case "received":
         return "They paid you back, or sent you money.";
       case "expense":
-        return "One person paid a bill; cost is split 50/50.";
+        return "One person paid a bill; cost is split 50/50 in PKR.";
       case "settlement":
         return "Someone paid to clear part of what they owed.";
       case "adjustment":
@@ -95,6 +111,38 @@ export function AddTransactionForm({
         return "";
     }
   }, [type]);
+
+  const pkrPreview = useMemo(() => {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    try {
+      if (currency === BASE_CURRENCY) return value;
+      const rate = Number(exchangeRate);
+      if (!Number.isFinite(rate) || rate <= 0) return null;
+      return toPkr(value, currency, rate);
+    } catch {
+      return null;
+    }
+  }, [amount, currency, exchangeRate]);
+
+  async function fetchSuggestedRate() {
+    if (currency === BASE_CURRENCY) return;
+    setRateLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/rates?from=${currency}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Could not fetch rate");
+        return;
+      }
+      setExchangeRate(String(data.rate));
+    } catch {
+      setError("Could not fetch rate");
+    } finally {
+      setRateLoading(false);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -107,24 +155,26 @@ export function AddTransactionForm({
       return;
     }
 
+    const rateNum = currency === BASE_CURRENCY ? 1 : Number(exchangeRate);
+    if (currency !== BASE_CURRENCY && (!Number.isFinite(rateNum) || rateNum <= 0)) {
+      setError("Enter today's rate: how many PKR for 1 " + currency);
+      setLoading(false);
+      return;
+    }
+
+    const base = {
+      type,
+      amount: value,
+      currency,
+      exchangeRate: rateNum,
+      description,
+      occurredOn,
+    };
+
     const payload =
       type === "expense"
-        ? {
-            type,
-            amount: value,
-            description,
-            occurredOn,
-            paidByUserId,
-            splitWithUserId,
-          }
-        : {
-            type,
-            amount: value,
-            description,
-            occurredOn,
-            fromUserId,
-            toUserId,
-          };
+        ? { ...base, paidByUserId, splitWithUserId }
+        : { ...base, fromUserId, toUserId };
 
     try {
       const res = await fetch(`/api/books/${bookId}/transactions`, {
@@ -142,6 +192,7 @@ export function AddTransactionForm({
       if (!isEditing) {
         setAmount("");
         setDescription("");
+        if (currency === BASE_CURRENCY) setExchangeRate("");
       }
       onCancelEdit?.();
       router.refresh();
@@ -187,7 +238,25 @@ export function AddTransactionForm({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm text-[var(--ink-soft)]">
-          Amount (PKR)
+          Currency
+          <select
+            className="field"
+            value={currency}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCurrency(next);
+              if (next === BASE_CURRENCY) setExchangeRate("");
+            }}
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm text-[var(--ink-soft)]">
+          Amount ({currency})
           <input
             type="number"
             inputMode="decimal"
@@ -200,6 +269,46 @@ export function AddTransactionForm({
             required
           />
         </label>
+      </div>
+
+      {currency !== BASE_CURRENCY ? (
+        <div className="mt-3 rounded-xl border border-[var(--line)] bg-white/70 p-3">
+          <label className="block text-sm text-[var(--ink-soft)]">
+            Today&apos;s rate (PKR per 1 {currency})
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.0001"
+              className="field"
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(e.target.value)}
+              placeholder="e.g. 76.50"
+              required
+            />
+          </label>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={fetchSuggestedRate}
+              disabled={rateLoading}
+              className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--moss)] hover:bg-white disabled:opacity-60"
+            >
+              {rateLoading ? "Fetching…" : "Suggest market rate"}
+            </button>
+            <span className="text-xs text-[var(--ink-soft)]">
+              Edit if your cash/shop rate is different.
+            </span>
+          </div>
+          {pkrPreview != null ? (
+            <p className="mt-2 text-sm font-semibold text-[var(--ink)]">
+              = {formatMoney(pkrPreview)} in total
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-sm text-[var(--ink-soft)]">
           Date
           <input
@@ -210,6 +319,13 @@ export function AddTransactionForm({
             required
           />
         </label>
+        {currency === BASE_CURRENCY && pkrPreview != null ? (
+          <div className="flex items-end text-sm text-[var(--ink-soft)]">
+            Ledger total: <span className="ml-1 font-semibold text-[var(--ink)]">{formatMoney(pkrPreview)}</span>
+          </div>
+        ) : (
+          <div />
+        )}
       </div>
 
       {type === "expense" ? (

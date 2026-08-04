@@ -10,11 +10,15 @@ import {
 } from "@/lib/ledger";
 import { getDb } from "@/lib/db";
 import { notifyBookMembers } from "@/lib/notify";
+import { BASE_CURRENCY, isSupportedCurrency, toPkr } from "@/lib/currency";
 
 const createSchema = z.object({
   type: z.enum(["gave", "received", "expense", "settlement", "adjustment"]),
+  /** Amount in the selected currency */
   amount: z.number().positive(),
-  currency: z.string().min(3).max(3).optional(),
+  currency: z.string().min(3).max(3).default("PKR"),
+  /** PKR per 1 unit of currency (required when currency !== PKR) */
+  exchangeRate: z.number().positive().optional(),
   description: z.string().max(400).optional(),
   occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   fromUserId: z.number().int().positive().nullable().optional(),
@@ -32,6 +36,20 @@ function validateParties(data: z.infer<typeof createSchema>) {
     return "From and to people are required.";
   }
   return null;
+}
+
+function resolveMoney(data: z.infer<typeof createSchema>) {
+  const currency = (data.currency || BASE_CURRENCY).toUpperCase();
+  if (!isSupportedCurrency(currency)) {
+    throw new Error("UNSUPPORTED_CURRENCY");
+  }
+  const exchangeRate = currency === BASE_CURRENCY ? 1 : data.exchangeRate;
+  if (currency !== BASE_CURRENCY && (!exchangeRate || exchangeRate <= 0)) {
+    throw new Error("RATE_REQUIRED");
+  }
+  const originalAmount = data.amount;
+  const amountPkr = toPkr(originalAmount, currency, exchangeRate || 1);
+  return { currency, exchangeRate: exchangeRate || 1, originalAmount, amountPkr };
 }
 
 export async function POST(
@@ -58,12 +76,31 @@ export async function POST(
       return NextResponse.json({ error: partyError }, { status: 400 });
     }
 
+    let money;
+    try {
+      money = resolveMoney(parsed.data);
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      if (code === "RATE_REQUIRED") {
+        return NextResponse.json(
+          { error: "Enter today's exchange rate (PKR per 1 unit)." },
+          { status: 400 }
+        );
+      }
+      if (code === "UNSUPPORTED_CURRENCY") {
+        return NextResponse.json({ error: "Unsupported currency." }, { status: 400 });
+      }
+      throw err;
+    }
+
     const data = parsed.data;
     const txId = addTransaction({
       bookId,
       type: data.type,
-      amount: data.amount,
-      currency: data.currency,
+      amount: money.amountPkr,
+      currency: money.currency,
+      originalAmount: money.originalAmount,
+      exchangeRate: money.exchangeRate,
       description: data.description,
       occurredOn: data.occurredOn,
       createdBy: session.userId,
@@ -79,13 +116,18 @@ export async function POST(
       action: "added",
       transaction: {
         type: data.type,
-        amount: data.amount,
-        currency: data.currency || "PKR",
-        description: data.description || null,
+        amount: money.amountPkr,
+        currency: "PKR",
+        description:
+          money.currency === "PKR"
+            ? data.description || null
+            : `${money.currency} ${money.originalAmount} @ ${money.exchangeRate}${
+                data.description ? ` — ${data.description}` : ""
+              }`,
       },
     });
 
-    return NextResponse.json({ id: txId }, { status: 201 });
+    return NextResponse.json({ id: txId, amountPkr: money.amountPkr }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";
     if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -121,13 +163,32 @@ export async function PATCH(
       return NextResponse.json({ error: partyError }, { status: 400 });
     }
 
+    let money;
+    try {
+      money = resolveMoney(parsed.data);
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      if (code === "RATE_REQUIRED") {
+        return NextResponse.json(
+          { error: "Enter today's exchange rate (PKR per 1 unit)." },
+          { status: 400 }
+        );
+      }
+      if (code === "UNSUPPORTED_CURRENCY") {
+        return NextResponse.json({ error: "Unsupported currency." }, { status: 400 });
+      }
+      throw err;
+    }
+
     const data = parsed.data;
     const ok = updateTransaction({
       id: data.transactionId,
       bookId,
       type: data.type,
-      amount: data.amount,
-      currency: data.currency,
+      amount: money.amountPkr,
+      currency: money.currency,
+      originalAmount: money.originalAmount,
+      exchangeRate: money.exchangeRate,
       description: data.description,
       occurredOn: data.occurredOn,
       fromUserId: data.fromUserId,
@@ -146,13 +207,18 @@ export async function PATCH(
       action: "updated",
       transaction: {
         type: data.type,
-        amount: data.amount,
-        currency: data.currency || "PKR",
-        description: data.description || null,
+        amount: money.amountPkr,
+        currency: "PKR",
+        description:
+          money.currency === "PKR"
+            ? data.description || null
+            : `${money.currency} ${money.originalAmount} @ ${money.exchangeRate}${
+                data.description ? ` — ${data.description}` : ""
+              }`,
       },
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, amountPkr: money.amountPkr });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";
     if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -194,7 +260,7 @@ export async function DELETE(
         transaction: {
           type: existing.type,
           amount: existing.amount,
-          currency: existing.currency,
+          currency: "PKR",
           description: existing.description,
         },
       });

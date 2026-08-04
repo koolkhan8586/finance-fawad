@@ -43,6 +43,8 @@ export default async function BookPage({
     type: tx.type as EditableTransaction["type"],
     amount: tx.amount,
     currency: tx.currency,
+    original_amount: tx.original_amount,
+    exchange_rate: tx.exchange_rate,
     description: tx.description,
     occurred_on: tx.occurred_on,
     from_user_id: tx.from_user_id,
