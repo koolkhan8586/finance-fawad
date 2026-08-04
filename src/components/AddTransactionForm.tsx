@@ -171,7 +171,11 @@ export function AddTransactionForm({
             onClick={() => setType(value)}
             className={`min-h-11 rounded-xl px-2 py-2.5 text-sm font-medium sm:min-h-0 sm:rounded-lg sm:px-3 sm:py-1.5 ${
               type === value
-                ? "bg-[var(--moss)] text-white"
+                ? value === "gave" || value === "settlement"
+                  ? "bg-[var(--debit)] text-white"
+                  : value === "received"
+                    ? "bg-[var(--credit)] text-white"
+                    : "bg-[var(--moss)] text-white"
                 : "border border-[var(--line)] bg-white/70"
             } ${value === "adjustment" ? "col-span-3 sm:col-span-1" : ""}`}
           >

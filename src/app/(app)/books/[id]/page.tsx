@@ -9,8 +9,8 @@ import {
   listTransactions,
   userCanAccessBook,
 } from "@/lib/ledger";
-import { formatMoney } from "@/lib/format";
 import { BookActivity } from "@/components/BookActivity";
+import { BalanceHero } from "@/components/BalanceHero";
 import type { EditableTransaction } from "@/components/AddTransactionForm";
 
 export const dynamic = "force-dynamic";
@@ -71,46 +71,13 @@ export default async function BookPage({
         ) : null}
       </div>
 
-      <section className="balance-pulse surface mt-5 rounded-2xl p-4 sm:mt-8 sm:p-6">
-        <p className="text-xs uppercase tracking-wide text-[var(--ink-soft)] sm:text-sm">
-          Your position
-        </p>
-        <p
-          className={`mt-2 font-[family-name:var(--font-display)] text-3xl leading-tight sm:text-4xl ${
-            myBalance > 0
-              ? "text-[var(--moss)]"
-              : myBalance < 0
-                ? "text-[var(--gold)]"
-                : "text-[var(--ink-soft)]"
-          }`}
-        >
-          {myBalance === 0
-            ? "All settled"
-            : myBalance > 0
-              ? `${formatMoney(myBalance)} owed to you`
-              : `You owe ${formatMoney(Math.abs(myBalance))}`}
-        </p>
-        {other && myBalance !== 0 ? (
-          <p className="mt-2 text-sm text-[var(--ink-soft)]">with {other.name}</p>
-        ) : null}
-        <ul className="mt-4 grid gap-2 text-sm text-[var(--ink-soft)] sm:mt-5 sm:flex sm:flex-wrap sm:gap-4">
-          {balances.map((b) => (
-            <li
-              key={b.user_id}
-              className="flex items-center justify-between rounded-xl bg-white/50 px-3 py-2 sm:bg-transparent sm:p-0"
-            >
-              <span className="font-medium text-[var(--ink)]">{b.name}</span>
-              <span className="sm:ml-1">
-                {b.balance === 0
-                  ? "even"
-                  : b.balance > 0
-                    ? `+${formatMoney(b.balance)}`
-                    : `−${formatMoney(Math.abs(b.balance))}`}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="fade-up mt-5 sm:mt-8">
+        <BalanceHero
+          myBalance={myBalance}
+          otherName={other?.name}
+          memberBalances={balances}
+        />
+      </div>
 
       <BookActivity
         bookId={bookId}
