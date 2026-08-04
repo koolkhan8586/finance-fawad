@@ -31,17 +31,17 @@ if [[ ! -f .env ]]; then
   echo "    nano ${APP_DIR}/.env"
 fi
 
-# Load env for build metadata
-set -a
-# shellcheck disable=SC1091
-source .env
-set +a
+# Fix unquoted ADMIN_NAME=Ammad Khan (breaks bash/systemd)
+if grep -qE '^ADMIN_NAME=[^"].*[[:space:]]' .env; then
+  sed -i 's/^ADMIN_NAME=\(.*\)$/ADMIN_NAME="\1"/' .env
+  echo "==> Quoted ADMIN_NAME in .env"
+fi
 
 echo "==> Installing npm packages"
 npm ci
 
 echo "==> Building Next.js app"
-npm run build
+NEXT_PUBLIC_APP_URL="https://${DOMAIN}" npm run build
 
 mkdir -p data
 chown -R root:root "$APP_DIR"
