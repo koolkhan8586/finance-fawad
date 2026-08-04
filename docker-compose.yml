@@ -1,0 +1,17 @@
+services:
+  musa:
+    build: .
+    container_name: musa-ledger
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_PATH: /data/musa.db
+      NEXT_PUBLIC_APP_URL: https://loan.khanmusa.com
+    volumes:
+      - musa_data:/data
+
+volumes:
+  musa_data:

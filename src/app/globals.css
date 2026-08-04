@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #13241c;
+  --ink-soft: #3d5347;
+  --paper: #f3efe4;
+  --foam: #e7f2ea;
+  --moss: #1f6a4f;
+  --moss-deep: #0f3d30;
+  --leaf: #2f9e6b;
+  --gold: #c7923a;
+  --gold-soft: #e8c478;
+  --danger: #b42318;
+  --line: rgba(19, 36, 28, 0.12);
+  --shadow: 0 24px 60px rgba(15, 61, 48, 0.14);
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+  --color-foam: var(--foam);
+  --color-moss: var(--moss);
+  --color-moss-deep: var(--moss-deep);
+  --color-leaf: var(--leaf);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-body), sans-serif;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(47, 158, 107, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 95% 5%, rgba(199, 146, 58, 0.18), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(15, 61, 48, 0.08), transparent 55%),
+    linear-gradient(180deg, #f7f4ec 0%, #eef5f0 45%, #f3efe4 100%);
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.surface {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.brand-mark {
+  letter-spacing: -0.04em;
+}
+
+.fade-up {
+  animation: fadeUp 0.7s ease both;
+}
+
+.fade-up-delay {
+  animation: fadeUp 0.85s ease 0.12s both;
+}
+
+.fade-up-delay-2 {
+  animation: fadeUp 0.9s ease 0.22s both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.balance-pulse {
+  animation: balanceIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes balanceIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.row-enter {
+  animation: rowIn 0.45s ease both;
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
