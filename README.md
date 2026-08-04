@@ -94,21 +94,21 @@ nano .env
 docker compose up -d --build
 ```
 
-## Notifications (WhatsApp free → email fallback)
+## Notifications (TextMeBot WhatsApp → email fallback)
 
-When someone adds/edits/deletes an entry, other members of that book can get an alert:
+When someone adds/edits/deletes an entry, other book members can get a WhatsApp alert.
 
-1. **WhatsApp (free)** via [CallMeBot](https://www.callmebot.com/blog/free-api-whatsapp-messages/)
-   - Each person activates the bot once and gets an API key
-   - On **People → Edit**, set WhatsApp phone (`+92…`) + API key
-2. **Email fallback** if WhatsApp is missing/fails — set SMTP in `.env`:
+1. Put your TextMeBot API key in `/opt/musa/.env`:
 
 ```bash
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=you@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM="Loan <you@gmail.com>"
+TEXTMEBOT_APIKEY=your_textmebot_key
 ```
 
-Paid WhatsApp Business API is not required for this free setup.
+2. Restart: `systemctl restart musa`
+3. **People → Edit** each person → set WhatsApp phone like `+923001234567`
+
+Loan calls:
+
+`https://api.textmebot.com/send.php?recipient=PHONE&apikey=KEY&text=MESSAGE`
+
+Optional email fallback if WhatsApp fails — set `SMTP_*` in `.env` (see `.env.example`).

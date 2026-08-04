@@ -21,9 +21,13 @@ export async function GET() {
     }
     return NextResponse.json({
       users: users.map((u) => ({
-        ...u,
-        whatsapp_apikey: u.whatsapp_apikey ? "••••••" : null,
-        has_whatsapp_key: Boolean(u.whatsapp_apikey),
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        role: u.role,
+        email: u.email,
+        whatsapp_phone: u.whatsapp_phone,
+        created_at: u.created_at,
       })),
     });
   } catch (e) {

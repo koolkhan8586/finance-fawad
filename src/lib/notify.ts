@@ -9,6 +9,14 @@ function appUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "https://loan.khanmusa.com").replace(/\/$/, "");
 }
 
+function normalizePhone(phone: string) {
+  const trimmed = phone.trim();
+  if (trimmed.startsWith("+")) {
+    return `+${trimmed.slice(1).replace(/\D/g, "")}`;
+  }
+  return trimmed.replace(/\D/g, "");
+}
+
 function buildMessage(input: {
   actorName: string;
   action: NotifyAction;
@@ -32,14 +40,37 @@ function buildMessage(input: {
   ].join("\n");
 }
 
-async function sendWhatsApp(phone: string, apikey: string, text: string) {
+/** TextMeBot: one server API key can message any recipient phone. */
+async function sendTextMeBot(phone: string, text: string) {
+  const apikey = process.env.TEXTMEBOT_APIKEY?.trim();
+  if (!apikey) throw new Error("TEXTMEBOT_APIKEY not set");
+
+  const url = new URL("https://api.textmebot.com/send.php");
+  url.searchParams.set("recipient", normalizePhone(phone));
+  url.searchParams.set("apikey", apikey);
+  url.searchParams.set("text", text);
+
+  const res = await fetch(url.toString(), { method: "GET" });
+  const body = await res.text().catch(() => "");
+  if (!res.ok) {
+    throw new Error(`TextMeBot failed (${res.status}): ${body.slice(0, 200)}`);
+  }
+  // TextMeBot often returns 200 with an error string in the body
+  const lower = body.toLowerCase();
+  if (lower.includes("error") || lower.includes("invalid") || lower.includes("not linked")) {
+    throw new Error(`TextMeBot: ${body.slice(0, 200)}`);
+  }
+}
+
+/** Legacy CallMeBot (per-user API key) — only if TextMeBot is not configured. */
+async function sendCallMeBot(phone: string, apikey: string, text: string) {
   const url = new URL("https://api.callmebot.com/whatsapp.php");
-  url.searchParams.set("phone", phone.replace(/[^\d+]/g, ""));
+  url.searchParams.set("phone", normalizePhone(phone));
   url.searchParams.set("text", text);
   url.searchParams.set("apikey", apikey);
   const res = await fetch(url.toString(), { method: "GET" });
   if (!res.ok) {
-    throw new Error(`WhatsApp failed (${res.status})`);
+    throw new Error(`CallMeBot failed (${res.status})`);
   }
 }
 
@@ -77,13 +108,21 @@ async function notifyPerson(
   subject: string
 ) {
   const phone = person.whatsapp_phone?.trim();
-  const key = person.whatsapp_apikey?.trim();
-  if (phone && key) {
+  const textMeKey = process.env.TEXTMEBOT_APIKEY?.trim();
+
+  if (phone && textMeKey) {
     try {
-      await sendWhatsApp(phone, key, text);
+      await sendTextMeBot(phone, text);
       return "whatsapp";
     } catch (err) {
-      console.error("WhatsApp notify failed for", person.name, err);
+      console.error("TextMeBot notify failed for", person.name, err);
+    }
+  } else if (phone && person.whatsapp_apikey?.trim()) {
+    try {
+      await sendCallMeBot(phone, person.whatsapp_apikey.trim(), text);
+      return "whatsapp";
+    } catch (err) {
+      console.error("CallMeBot notify failed for", person.name, err);
     }
   }
 

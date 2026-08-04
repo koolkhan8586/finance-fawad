@@ -19,8 +19,9 @@ export default async function PeoplePage() {
     role: u.role,
     email: u.email,
     whatsapp_phone: u.whatsapp_phone,
-    has_whatsapp_key: Boolean(u.whatsapp_apikey),
   }));
+
+  const textMeConfigured = Boolean(process.env.TEXTMEBOT_APIKEY?.trim());
 
   return (
     <main>
@@ -30,8 +31,8 @@ export default async function PeoplePage() {
         </p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl sm:text-4xl">People</h1>
         <p className="mt-2 max-w-xl text-sm text-[var(--ink-soft)] sm:text-base">
-          Create, edit, or remove logins. Add email or free WhatsApp (CallMeBot) so members get alerts
-          when a shared book changes.
+          Create, edit, or remove logins. Add each person’s WhatsApp number for TextMeBot alerts
+          {textMeConfigured ? " (API key is set on the server)." : " — set TEXTMEBOT_APIKEY in .env first."}
         </p>
       </div>
 

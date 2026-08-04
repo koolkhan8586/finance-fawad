@@ -10,7 +10,6 @@ type Person = {
   role: "admin" | "member";
   email: string | null;
   whatsapp_phone: string | null;
-  has_whatsapp_key?: boolean;
 };
 
 export function PeopleManager({
@@ -25,22 +24,18 @@ export function PeopleManager({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // create form
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
-  const [whatsappApikey, setWhatsappApikey] = useState("");
 
-  // edit form
   const [editName, setEditName] = useState("");
   const [editUsername, setEditUsername] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "member">("member");
   const [editEmail, setEditEmail] = useState("");
   const [editWhatsappPhone, setEditWhatsappPhone] = useState("");
-  const [editWhatsappApikey, setEditWhatsappApikey] = useState("");
 
   function startEdit(person: Person) {
     setEditingId(person.id);
@@ -50,7 +45,6 @@ export function PeopleManager({
     setEditRole(person.role);
     setEditEmail(person.email || "");
     setEditWhatsappPhone(person.whatsapp_phone || "");
-    setEditWhatsappApikey("");
     setError("");
   }
 
@@ -68,7 +62,6 @@ export function PeopleManager({
           password,
           email,
           whatsappPhone,
-          whatsappApikey,
         }),
       });
       const data = await res.json();
@@ -81,7 +74,6 @@ export function PeopleManager({
       setPassword("");
       setEmail("");
       setWhatsappPhone("");
-      setWhatsappApikey("");
       router.refresh();
     } catch {
       setError("Network error");
@@ -106,7 +98,6 @@ export function PeopleManager({
           password: editPassword || undefined,
           email: editEmail,
           whatsappPhone: editWhatsappPhone,
-          whatsappApikey: editWhatsappApikey || undefined,
         }),
       });
       const data = await res.json();
@@ -178,9 +169,9 @@ export function PeopleManager({
             />
           </label>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="text-sm text-[var(--ink-soft)]">
-            Email (for alerts)
+            Email (optional fallback)
             <input
               type="email"
               className="field"
@@ -190,7 +181,7 @@ export function PeopleManager({
             />
           </label>
           <label className="text-sm text-[var(--ink-soft)]">
-            WhatsApp phone
+            WhatsApp phone (TextMeBot)
             <input
               className="field"
               value={whatsappPhone}
@@ -198,18 +189,9 @@ export function PeopleManager({
               placeholder="+923001234567"
             />
           </label>
-          <label className="text-sm text-[var(--ink-soft)]">
-            CallMeBot API key
-            <input
-              className="field"
-              value={whatsappApikey}
-              onChange={(e) => setWhatsappApikey(e.target.value)}
-              placeholder="free WhatsApp key"
-            />
-          </label>
         </div>
         <p className="mt-2 text-xs text-[var(--ink-soft)]">
-          Alerts: WhatsApp first (free via CallMeBot), otherwise email if SMTP is set on the server.
+          WhatsApp alerts use your server TextMeBot API key. Only the phone number is needed per person.
         </p>
         <button type="submit" disabled={loading} className="btn-primary mt-4 w-full sm:w-auto">
           {loading ? "Saving…" : "Create login"}
@@ -287,15 +269,7 @@ export function PeopleManager({
                       className="field"
                       value={editWhatsappPhone}
                       onChange={(e) => setEditWhatsappPhone(e.target.value)}
-                    />
-                  </label>
-                  <label className="text-sm text-[var(--ink-soft)] sm:col-span-2">
-                    CallMeBot API key {person.has_whatsapp_key ? "(saved — enter new to replace)" : ""}
-                    <input
-                      className="field"
-                      value={editWhatsappApikey}
-                      onChange={(e) => setEditWhatsappApikey(e.target.value)}
-                      placeholder={person.has_whatsapp_key ? "••••••" : "optional"}
+                      placeholder="+923001234567"
                     />
                   </label>
                 </div>
@@ -320,9 +294,7 @@ export function PeopleManager({
                   <p className="mt-1 text-xs text-[var(--ink-soft)]">
                     {person.email || "no email"}
                     {" · "}
-                    {person.whatsapp_phone
-                      ? `WA ${person.whatsapp_phone}${person.has_whatsapp_key ? " ✓" : " (need API key)"}`
-                      : "no WhatsApp"}
+                    {person.whatsapp_phone ? `WA ${person.whatsapp_phone}` : "no WhatsApp"}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
