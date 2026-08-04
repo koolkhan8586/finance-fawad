@@ -4,6 +4,8 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { LogoutButton } from "@/components/LogoutButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
