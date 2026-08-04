@@ -20,21 +20,21 @@ export default async function PeoplePage() {
         <p className="text-sm font-medium uppercase tracking-[0.14em] text-[var(--moss)]">
           Admin
         </p>
-        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl">People</h1>
-        <p className="mt-2 max-w-xl text-[var(--ink-soft)]">
+        <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl sm:text-4xl">People</h1>
+        <p className="mt-2 max-w-xl text-sm text-[var(--ink-soft)] sm:text-base">
           Create logins for your brother and friends. Each person only sees books you share with them.
         </p>
       </div>
 
-      <div className="fade-up-delay mt-8">
+      <div className="fade-up-delay mt-6 sm:mt-8">
         <CreateUserForm />
       </div>
 
-      <ul className="fade-up-delay-2 mt-8 space-y-2">
+      <ul className="fade-up-delay-2 mt-6 space-y-2 sm:mt-8">
         {users.map((user, index) => (
           <li
             key={user.id}
-            className="row-enter surface flex items-center justify-between rounded-2xl px-5 py-4"
+            className="row-enter surface flex items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5"
             style={{ animationDelay: `${index * 0.04}s` }}
           >
             <div>

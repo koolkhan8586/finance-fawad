@@ -38,24 +38,20 @@ export function CreateUserForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="surface rounded-2xl p-5">
+    <form onSubmit={onSubmit} className="surface rounded-2xl p-4 sm:p-5">
       <h2 className="font-[family-name:var(--font-display)] text-xl">Add login</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <label className="text-sm text-[var(--ink-soft)]">
           Full name
-          <input
-            className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+          <input className="field" value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
         <label className="text-sm text-[var(--ink-soft)]">
           Username
           <input
-            className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+            className="field"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            autoCapitalize="none"
             required
           />
         </label>
@@ -63,7 +59,7 @@ export function CreateUserForm() {
           Password
           <input
             type="password"
-            className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+            className="field"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
@@ -72,11 +68,7 @@ export function CreateUserForm() {
         </label>
       </div>
       {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-4 rounded-xl bg-[var(--moss)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--moss-deep)] disabled:opacity-60"
-      >
+      <button type="submit" disabled={loading} className="btn-primary mt-4 w-full sm:w-auto">
         {loading ? "Saving…" : "Create login"}
       </button>
     </form>

@@ -52,33 +52,29 @@ export function CreateBookForm({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-xl bg-[var(--moss)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--moss-deep)]"
-      >
+      <button type="button" onClick={() => setOpen(true)} className="btn-primary w-full sm:w-auto">
         New shared book
       </button>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="surface rounded-2xl p-5">
+    <form onSubmit={onSubmit} className="surface rounded-2xl p-4 sm:p-5">
       <h2 className="font-[family-name:var(--font-display)] text-xl">New shared book</h2>
       <label className="mt-4 block text-sm text-[var(--ink-soft)]">
         Title
         <input
-          className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+          className="field"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Ammad ↔ Brother"
+          placeholder="e.g. Brother"
           required
         />
       </label>
       <label className="mt-3 block text-sm text-[var(--ink-soft)]">
         Note (optional)
         <input
-          className="mt-1.5 w-full rounded-xl border border-[var(--line)] bg-white/80 px-3 py-2.5"
+          className="field"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Family support, travel, etc."
@@ -88,9 +84,7 @@ export function CreateBookForm({
         <legend className="text-sm text-[var(--ink-soft)]">Share with</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {members.length === 0 ? (
-            <p className="text-sm text-[var(--ink-soft)]">
-              Add people first on the People page.
-            </p>
+            <p className="text-sm text-[var(--ink-soft)]">Add people first on the People page.</p>
           ) : (
             members.map((m) => {
               const selected = memberIds.includes(m.id);
@@ -99,7 +93,7 @@ export function CreateBookForm({
                   key={m.id}
                   type="button"
                   onClick={() => toggleMember(m.id)}
-                  className={`rounded-lg px-3 py-1.5 text-sm ${
+                  className={`min-h-11 rounded-xl px-3 py-2 text-sm ${
                     selected
                       ? "bg-[var(--moss)] text-white"
                       : "border border-[var(--line)] bg-white/70"
@@ -113,18 +107,18 @@ export function CreateBookForm({
         </div>
       </fieldset>
       {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <button
           type="submit"
           disabled={loading || memberIds.length === 0}
-          className="rounded-xl bg-[var(--moss)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="btn-primary w-full disabled:opacity-50 sm:w-auto"
         >
           {loading ? "Creating…" : "Create book"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm"
+          className="w-full rounded-xl border border-[var(--line)] px-4 py-3 text-sm sm:w-auto sm:py-2"
         >
           Cancel
         </button>

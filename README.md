@@ -1,4 +1,4 @@
-# Musa Ledger — deploy to loan.khanmusa.com
+# Loan — shared money books (loan.khanmusa.com)
 
 Shared money books for family and friends. Track loans, repayments, and shared expenses with separate logins.
 

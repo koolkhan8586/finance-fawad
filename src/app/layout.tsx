@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
@@ -15,10 +15,22 @@ const body = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Musa — Shared money books",
+  title: "Loan — Shared money books",
   description:
     "Track loans, repayments, and shared expenses with family and friends.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  appleWebApp: {
+    capable: true,
+    title: "Loan",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#1f6a4f",
 };
 
 export default function RootLayout({
