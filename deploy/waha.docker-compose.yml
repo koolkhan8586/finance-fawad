@@ -1,0 +1,28 @@
+# Example WAHA container on the same VPS as Loan.
+# Docs: https://waha.devlike.pro/docs/overview/quick-start/
+#
+# 1) Create a key, put it in .env as WAHA_API_KEY for both WAHA and Loan
+# 2) docker compose -f deploy/waha.docker-compose.yml up -d
+# 3) Open http://SERVER_IP:3001 → scan QR with WhatsApp
+# 4) In Loan /opt/musa/.env set:
+#      WAHA_URL=http://127.0.0.1:3001
+#      WAHA_API_KEY=same-key
+#      WAHA_SESSION=default
+# 5) systemctl restart musa
+
+services:
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: waha
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      # Prefer a long random key; Loan must use the same value in WAHA_API_KEY
+      WAHA_API_KEY: ${WAHA_API_KEY:-change-me-waha-key}
+      WHATSAPP_DEFAULT_ENGINE: WEBJS
+    volumes:
+      - waha_sessions:/app/.sessions
+
+volumes:
+  waha_sessions:

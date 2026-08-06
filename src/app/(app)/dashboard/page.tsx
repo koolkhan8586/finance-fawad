@@ -24,6 +24,9 @@ export default async function DashboardPage() {
     return { book, members, mine, others };
   });
 
+  const totalCredit = cards.reduce((sum, c) => sum + (c.mine > 0 ? c.mine : 0), 0);
+  const totalDebit = cards.reduce((sum, c) => sum + (c.mine < 0 ? Math.abs(c.mine) : 0), 0);
+
   return (
     <main>
       <div className="fade-up">
@@ -37,6 +40,23 @@ export default async function DashboardPage() {
           Open a shared book to record money given, received, or spent together.
         </p>
       </div>
+
+      {cards.length > 0 ? (
+        <div className="fade-up-delay mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-[var(--credit)]/20 bg-[var(--credit-soft)] px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide text-[var(--credit)]">Owed to you</p>
+            <p className="mt-1 text-lg font-bold text-[var(--credit)] sm:text-xl">
+              {formatMoney(totalCredit)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--debit)]/20 bg-[var(--debit-soft)] px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide text-[var(--debit)]">You owe</p>
+            <p className="mt-1 text-lg font-bold text-[var(--debit)] sm:text-xl">
+              {formatMoney(totalDebit)}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {session.role === "admin" ? (
         <div className="fade-up-delay mt-6 sm:mt-8">
@@ -53,42 +73,57 @@ export default async function DashboardPage() {
               : " Ask Ammad to add you to a book."}
           </p>
         ) : (
-          cards.map(({ book, mine, others }, index) => (
-            <Link
-              key={book.id}
-              href={`/books/${book.id}`}
-              className="row-enter surface block rounded-2xl px-4 py-4 transition active:scale-[0.99] hover:bg-white/80 sm:px-5 sm:py-5"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)] sm:text-2xl">
-                    {book.title}
-                  </h2>
-                  <p className="mt-1 truncate text-sm text-[var(--ink-soft)]">
-                    with {others.length ? others.join(", ") : "you"}
-                    {book.description ? ` · ${book.description}` : ""}
-                  </p>
+          cards.map(({ book, mine, others }, index) => {
+            const isCredit = mine > 0;
+            const isDebit = mine < 0;
+            return (
+              <Link
+                key={book.id}
+                href={`/books/${book.id}`}
+                className={`row-enter block rounded-2xl px-4 py-4 transition active:scale-[0.99] sm:px-5 sm:py-5 ${
+                  isCredit ? "tx-in" : isDebit ? "tx-out" : "surface"
+                }`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-[family-name:var(--font-display)] text-xl text-[var(--ink)] sm:text-2xl">
+                      {book.title}
+                    </h2>
+                    <p className="mt-1 truncate text-sm text-[var(--ink-soft)]">
+                      with {others.length ? others.join(", ") : "you"}
+                      {book.description ? ` · ${book.description}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p
+                      className={`text-[10px] uppercase tracking-wide sm:text-xs ${
+                        isCredit
+                          ? "text-[var(--credit)]"
+                          : isDebit
+                            ? "text-[var(--debit)]"
+                            : "text-[var(--ink-soft)]"
+                      }`}
+                    >
+                      {isCredit ? "They owe you" : isDebit ? "You owe" : "Settled"}
+                    </p>
+                    <p
+                      className={`mt-1 text-lg font-bold sm:text-xl ${
+                        isCredit
+                          ? "text-[var(--credit)]"
+                          : isDebit
+                            ? "text-[var(--debit)]"
+                            : "text-[var(--ink-soft)]"
+                      }`}
+                    >
+                      {isCredit ? "+" : isDebit ? "−" : ""}
+                      {formatMoney(Math.abs(mine))}
+                    </p>
+                  </div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-[10px] uppercase tracking-wide text-[var(--ink-soft)] sm:text-xs">
-                    {mine > 0 ? "They owe you" : mine < 0 ? "You owe" : "Settled"}
-                  </p>
-                  <p
-                    className={`mt-1 text-lg font-semibold sm:text-xl ${
-                      mine > 0
-                        ? "text-[var(--moss)]"
-                        : mine < 0
-                          ? "text-[var(--gold)]"
-                          : "text-[var(--ink-soft)]"
-                    }`}
-                  >
-                    {formatMoney(Math.abs(mine))}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))
+              </Link>
+            );
+          })
         )}
       </section>
     </main>

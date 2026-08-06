@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { listUsers } from "@/lib/ledger";
-import { CreateUserForm } from "@/components/CreateUserForm";
+import { PeopleManager } from "@/components/PeopleManager";
+import { whatsappProviderStatus } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,22 @@ export default async function PeoplePage() {
   if (!session) redirect("/login");
   if (session.role !== "admin") redirect("/dashboard");
 
-  const users = listUsers();
+  const users = listUsers().map((u) => ({
+    id: u.id,
+    name: u.name,
+    username: u.username,
+    role: u.role,
+    email: u.email,
+    whatsapp_phone: u.whatsapp_phone,
+  }));
+
+  const provider = whatsappProviderStatus();
+  const providerHint =
+    provider === "waha"
+      ? "WhatsApp via WAHA is configured on the server."
+      : provider === "textmebot"
+        ? "WhatsApp via TextMeBot is configured on the server."
+        : "Set WAHA_URL (or TEXTMEBOT_APIKEY) in .env to enable WhatsApp alerts.";
 
   return (
     <main>
@@ -22,31 +38,14 @@ export default async function PeoplePage() {
         </p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl sm:text-4xl">People</h1>
         <p className="mt-2 max-w-xl text-sm text-[var(--ink-soft)] sm:text-base">
-          Create logins for your brother and friends. Each person only sees books you share with them.
+          Create, edit, or remove logins. Add each person’s WhatsApp number for ledger alerts.{" "}
+          {providerHint}
         </p>
       </div>
 
       <div className="fade-up-delay mt-6 sm:mt-8">
-        <CreateUserForm />
+        <PeopleManager people={users} currentUserId={session.userId} />
       </div>
-
-      <ul className="fade-up-delay-2 mt-6 space-y-2 sm:mt-8">
-        {users.map((user, index) => (
-          <li
-            key={user.id}
-            className="row-enter surface flex items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5"
-            style={{ animationDelay: `${index * 0.04}s` }}
-          >
-            <div>
-              <p className="font-semibold text-[var(--ink)]">{user.name}</p>
-              <p className="text-sm text-[var(--ink-soft)]">@{user.username}</p>
-            </div>
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--moss)]">
-              {user.role}
-            </span>
-          </li>
-        ))}
-      </ul>
     </main>
   );
 }

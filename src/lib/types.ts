@@ -12,6 +12,9 @@ export interface User {
   username: string;
   name: string;
   role: UserRole;
+  email: string | null;
+  whatsapp_phone: string | null;
+  whatsapp_apikey: string | null;
   created_at: string;
 }
 
@@ -28,14 +31,20 @@ export interface BookMember {
   user_id: number;
   name: string;
   username: string;
+  email?: string | null;
+  whatsapp_phone?: string | null;
+  whatsapp_apikey?: string | null;
 }
 
 export interface Transaction {
   id: number;
   book_id: number;
   type: TransactionType;
+  /** Always PKR — used for balances / totals */
   amount: number;
   currency: string;
+  original_amount: number | null;
+  exchange_rate: number | null;
   description: string | null;
   occurred_on: string;
   created_by: number;

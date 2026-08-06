@@ -14,6 +14,36 @@ function resolveDbPath() {
   return path.join(dataDir, "musa.db");
 }
 
+function columnExists(db: Database.Database, table: string, column: string) {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return rows.some((r) => r.name === column);
+}
+
+function migrate(db: Database.Database) {
+  if (!columnExists(db, "users", "email")) {
+    db.exec(`ALTER TABLE users ADD COLUMN email TEXT`);
+  }
+  if (!columnExists(db, "users", "whatsapp_phone")) {
+    db.exec(`ALTER TABLE users ADD COLUMN whatsapp_phone TEXT`);
+  }
+  if (!columnExists(db, "users", "whatsapp_apikey")) {
+    db.exec(`ALTER TABLE users ADD COLUMN whatsapp_apikey TEXT`);
+  }
+  if (!columnExists(db, "transactions", "original_amount")) {
+    db.exec(`ALTER TABLE transactions ADD COLUMN original_amount REAL`);
+  }
+  if (!columnExists(db, "transactions", "exchange_rate")) {
+    db.exec(`ALTER TABLE transactions ADD COLUMN exchange_rate REAL DEFAULT 1`);
+  }
+  // Backfill older rows: treat stored amount as PKR
+  db.exec(`
+    UPDATE transactions
+    SET original_amount = amount,
+        exchange_rate = COALESCE(exchange_rate, 1)
+    WHERE original_amount IS NULL
+  `);
+}
+
 function createDb() {
   const dbPath = resolveDbPath();
   const db = new Database(dbPath);
@@ -27,6 +57,9 @@ function createDb() {
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin', 'member')),
+      email TEXT,
+      whatsapp_phone TEXT,
+      whatsapp_apikey TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -50,6 +83,8 @@ function createDb() {
       type TEXT NOT NULL CHECK(type IN ('gave', 'received', 'expense', 'settlement', 'adjustment')),
       amount REAL NOT NULL CHECK(amount >= 0),
       currency TEXT NOT NULL DEFAULT 'PKR',
+      original_amount REAL,
+      exchange_rate REAL DEFAULT 1,
       description TEXT,
       occurred_on TEXT NOT NULL,
       created_by INTEGER NOT NULL REFERENCES users(id),
@@ -64,6 +99,7 @@ function createDb() {
     CREATE INDEX IF NOT EXISTS idx_book_members_user ON book_members(user_id);
   `);
 
+  migrate(db);
   seedAdmin(db);
   return db;
 }

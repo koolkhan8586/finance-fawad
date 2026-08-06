@@ -11,10 +11,25 @@ export async function GET() {
     const users = listUsers();
     if (session.role !== "admin") {
       return NextResponse.json({
-        users: users.map((u) => ({ id: u.id, name: u.name, username: u.username, role: u.role })),
+        users: users.map((u) => ({
+          id: u.id,
+          name: u.name,
+          username: u.username,
+          role: u.role,
+        })),
       });
     }
-    return NextResponse.json({ users });
+    return NextResponse.json({
+      users: users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        role: u.role,
+        email: u.email,
+        whatsapp_phone: u.whatsapp_phone,
+        created_at: u.created_at,
+      })),
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";
     if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,6 +42,9 @@ const createSchema = z.object({
   password: z.string().min(6).max(100),
   name: z.string().min(2).max(80),
   role: z.enum(["admin", "member"]).optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  whatsappPhone: z.string().max(20).optional().or(z.literal("")),
+  whatsappApikey: z.string().max(80).optional().or(z.literal("")),
 });
 
 export async function POST(request: Request) {
@@ -38,7 +56,12 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid user details." }, { status: 400 });
     }
-    const id = createUser(parsed.data);
+    const id = createUser({
+      ...parsed.data,
+      email: parsed.data.email || null,
+      whatsappPhone: parsed.data.whatsappPhone || null,
+      whatsappApikey: parsed.data.whatsappApikey || null,
+    });
     return NextResponse.json({ id }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ERROR";

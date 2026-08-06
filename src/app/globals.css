@@ -11,6 +11,12 @@
   --gold: #c7923a;
   --gold-soft: #e8c478;
   --danger: #b42318;
+  --credit: #15803d;
+  --credit-soft: #dcfce7;
+  --debit: #b91c1c;
+  --debit-soft: #fee2e2;
+  --neutral: #64748b;
+  --neutral-soft: #f1f5f9;
   --line: rgba(19, 36, 28, 0.12);
   --shadow: 0 24px 60px rgba(15, 61, 48, 0.14);
   --background: var(--paper);
@@ -30,6 +36,10 @@
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
   --color-danger: var(--danger);
+  --color-credit: var(--credit);
+  --color-credit-soft: var(--credit-soft);
+  --color-debit: var(--debit);
+  --color-debit-soft: var(--debit-soft);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
 }
@@ -168,6 +178,37 @@ button {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+.meter-fill {
+  animation: meterGrow 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: center;
+}
+
+@keyframes meterGrow {
+  from {
+    transform: scaleX(0.15);
+    opacity: 0.4;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.tx-in {
+  border-left: 4px solid var(--credit);
+  background: linear-gradient(90deg, var(--credit-soft), rgba(255, 255, 255, 0.7));
+}
+
+.tx-out {
+  border-left: 4px solid var(--debit);
+  background: linear-gradient(90deg, var(--debit-soft), rgba(255, 255, 255, 0.7));
+}
+
+.tx-neutral {
+  border-left: 4px solid var(--neutral);
+  background: linear-gradient(90deg, var(--neutral-soft), rgba(255, 255, 255, 0.7));
 }
 
 @media (max-width: 640px) {

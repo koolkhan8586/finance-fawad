@@ -94,12 +94,41 @@ nano .env
 docker compose up -d --build
 ```
 
-## First-time setup on the live site
+## Notifications (WAHA WhatsApp → TextMeBot → email)
 
-1. Sign in as admin (from `.env`)
-2. **People** → create logins for brother and friend
-3. **Books** → create a shared book with each person
-4. Share their username/password privately
-5. Add entries: gave / received / shared expense
+When someone adds/edits/deletes an entry, other book members can get a WhatsApp alert.
 
-Data lives in `./data/musa.db` (or `DATABASE_PATH`). Back that file up regularly.
+### Option A — WAHA (self-hosted WhatsApp API)
+
+1. Start WAHA (sample compose in `deploy/waha.docker-compose.yml`):
+
+```bash
+export WAHA_API_KEY='long-random-secret'
+docker compose -f /opt/musa/deploy/waha.docker-compose.yml up -d
+```
+
+2. Open `http://SERVER_IP:3001`, start session `default`, scan QR with WhatsApp.
+
+3. In Loan `/opt/musa/.env`:
+
+```bash
+WAHA_URL=http://127.0.0.1:3001
+WAHA_API_KEY=long-random-secret
+WAHA_SESSION=default
+```
+
+4. `systemctl restart musa`
+
+5. **People → Edit** → set WhatsApp phone like `+923001234567`
+
+Loan sends: `POST /api/sendText` with `chatId: 923001234567@c.us`.
+
+### Option B — TextMeBot
+
+```bash
+TEXTMEBOT_APIKEY=your_key
+```
+
+### Email fallback
+
+Set `SMTP_*` in `.env` (see `.env.example`) if WhatsApp fails or phone is missing.

@@ -6,10 +6,22 @@ export function listUsers(): User[] {
   const db = getDb();
   return db
     .prepare(
-      `SELECT id, username, name, role, created_at
+      `SELECT id, username, name, role, email, whatsapp_phone, whatsapp_apikey, created_at
        FROM users ORDER BY role DESC, name ASC`
     )
     .all() as User[];
+}
+
+export function getUserById(id: number): User | null {
+  const db = getDb();
+  return (
+    (db
+      .prepare(
+        `SELECT id, username, name, role, email, whatsapp_phone, whatsapp_apikey, created_at
+         FROM users WHERE id = ?`
+      )
+      .get(id) as User | undefined) || null
+  );
 }
 
 export function createUser(input: {
@@ -17,21 +29,114 @@ export function createUser(input: {
   password: string;
   name: string;
   role?: "admin" | "member";
+  email?: string | null;
+  whatsappPhone?: string | null;
+  whatsappApikey?: string | null;
 }) {
   const db = getDb();
   const passwordHash = bcrypt.hashSync(input.password, 10);
   const result = db
     .prepare(
-      `INSERT INTO users (username, password_hash, name, role)
-       VALUES (?, ?, ?, ?)`
+      `INSERT INTO users (username, password_hash, name, role, email, whatsapp_phone, whatsapp_apikey)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.username.trim().toLowerCase(),
       passwordHash,
       input.name.trim(),
-      input.role || "member"
+      input.role || "member",
+      input.email?.trim() || null,
+      input.whatsappPhone?.trim() || null,
+      input.whatsappApikey?.trim() || null
     );
-  return result.lastInsertRowid as number;
+  return Number(result.lastInsertRowid);
+}
+
+export function updateUser(
+  id: number,
+  input: {
+    username?: string;
+    name?: string;
+    role?: "admin" | "member";
+    password?: string;
+    email?: string | null;
+    whatsappPhone?: string | null;
+    whatsappApikey?: string | null;
+  }
+) {
+  const db = getDb();
+  const current = getUserById(id);
+  if (!current) return false;
+
+  const username = (input.username ?? current.username).trim().toLowerCase();
+  const name = (input.name ?? current.name).trim();
+  const role = input.role ?? current.role;
+  const email =
+    input.email === undefined ? current.email : input.email?.trim() || null;
+  const whatsappPhone =
+    input.whatsappPhone === undefined
+      ? current.whatsapp_phone
+      : input.whatsappPhone?.trim() || null;
+  const whatsappApikey =
+    input.whatsappApikey === undefined
+      ? current.whatsapp_apikey
+      : input.whatsappApikey?.trim() || null;
+
+  if (input.password && input.password.length >= 6) {
+    const passwordHash = bcrypt.hashSync(input.password, 10);
+    db.prepare(
+      `UPDATE users SET username = ?, name = ?, role = ?, password_hash = ?,
+         email = ?, whatsapp_phone = ?, whatsapp_apikey = ?
+       WHERE id = ?`
+    ).run(username, name, role, passwordHash, email, whatsappPhone, whatsappApikey, id);
+  } else {
+    db.prepare(
+      `UPDATE users SET username = ?, name = ?, role = ?,
+         email = ?, whatsapp_phone = ?, whatsapp_apikey = ?
+       WHERE id = ?`
+    ).run(username, name, role, email, whatsappPhone, whatsappApikey, id);
+  }
+  return true;
+}
+
+export function countAdmins() {
+  const db = getDb();
+  const row = db.prepare(`SELECT COUNT(*) AS c FROM users WHERE role = 'admin'`).get() as {
+    c: number;
+  };
+  return row.c;
+}
+
+export function userHasLedgerHistory(userId: number) {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT 1 AS ok FROM transactions
+       WHERE created_by = ? OR from_user_id = ? OR to_user_id = ?
+          OR paid_by_user_id = ? OR split_with_user_id = ?
+       LIMIT 1`
+    )
+    .get(userId, userId, userId, userId, userId);
+  return Boolean(row);
+}
+
+export function deleteUser(userId: number) {
+  const db = getDb();
+  if (userHasLedgerHistory(userId)) {
+    throw new Error("HAS_HISTORY");
+  }
+  const ownedBooks = db
+    .prepare(`SELECT id FROM books WHERE created_by = ?`)
+    .all(userId) as { id: number }[];
+  if (ownedBooks.length) {
+    throw new Error("OWNS_BOOKS");
+  }
+
+  const run = db.transaction(() => {
+    db.prepare(`DELETE FROM book_members WHERE user_id = ?`).run(userId);
+    db.prepare(`DELETE FROM users WHERE id = ?`).run(userId);
+  });
+  run();
 }
 
 export function listBooksForUser(userId: number, isAdmin: boolean) {
@@ -71,7 +176,8 @@ export function getBookMembers(bookId: number): BookMember[] {
   const db = getDb();
   return db
     .prepare(
-      `SELECT bm.book_id, bm.user_id, u.name, u.username
+      `SELECT bm.book_id, bm.user_id, u.name, u.username,
+              u.email, u.whatsapp_phone, u.whatsapp_apikey
        FROM book_members bm
        JOIN users u ON u.id = bm.user_id
        WHERE bm.book_id = ?
@@ -142,8 +248,11 @@ export function listTransactions(bookId: number): Transaction[] {
 export function addTransaction(input: {
   bookId: number;
   type: Transaction["type"];
+  /** PKR amount used in balances */
   amount: number;
   currency?: string;
+  originalAmount?: number;
+  exchangeRate?: number;
   description?: string;
   occurredOn: string;
   createdBy: number;
@@ -153,18 +262,24 @@ export function addTransaction(input: {
   splitWithUserId?: number | null;
 }) {
   const db = getDb();
+  const currency = input.currency || "PKR";
+  const originalAmount = input.originalAmount ?? input.amount;
+  const exchangeRate = currency === "PKR" ? 1 : input.exchangeRate ?? 1;
   const result = db
     .prepare(
       `INSERT INTO transactions (
-         book_id, type, amount, currency, description, occurred_on, created_by,
+         book_id, type, amount, currency, original_amount, exchange_rate,
+         description, occurred_on, created_by,
          from_user_id, to_user_id, paid_by_user_id, split_with_user_id
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.bookId,
       input.type,
       input.amount,
-      input.currency || "PKR",
+      currency,
+      originalAmount,
+      exchangeRate,
       input.description?.trim() || null,
       input.occurredOn,
       input.createdBy,
@@ -179,6 +294,59 @@ export function addTransaction(input: {
 export function deleteTransaction(id: number, bookId: number) {
   const db = getDb();
   return db.prepare(`DELETE FROM transactions WHERE id = ? AND book_id = ?`).run(id, bookId);
+}
+
+export function updateTransaction(input: {
+  id: number;
+  bookId: number;
+  type: Transaction["type"];
+  amount: number;
+  currency?: string;
+  originalAmount?: number;
+  exchangeRate?: number;
+  description?: string;
+  occurredOn: string;
+  fromUserId?: number | null;
+  toUserId?: number | null;
+  paidByUserId?: number | null;
+  splitWithUserId?: number | null;
+}) {
+  const db = getDb();
+  const currency = input.currency || "PKR";
+  const originalAmount = input.originalAmount ?? input.amount;
+  const exchangeRate = currency === "PKR" ? 1 : input.exchangeRate ?? 1;
+  const result = db
+    .prepare(
+      `UPDATE transactions SET
+         type = ?,
+         amount = ?,
+         currency = ?,
+         original_amount = ?,
+         exchange_rate = ?,
+         description = ?,
+         occurred_on = ?,
+         from_user_id = ?,
+         to_user_id = ?,
+         paid_by_user_id = ?,
+         split_with_user_id = ?
+       WHERE id = ? AND book_id = ?`
+    )
+    .run(
+      input.type,
+      input.amount,
+      currency,
+      originalAmount,
+      exchangeRate,
+      input.description?.trim() || null,
+      input.occurredOn,
+      input.fromUserId ?? null,
+      input.toUserId ?? null,
+      input.paidByUserId ?? null,
+      input.splitWithUserId ?? null,
+      input.id,
+      input.bookId
+    );
+  return result.changes > 0;
 }
 
 /**
