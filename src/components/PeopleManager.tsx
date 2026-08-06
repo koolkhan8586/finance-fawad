@@ -181,7 +181,7 @@ export function PeopleManager({
             />
           </label>
           <label className="text-sm text-[var(--ink-soft)]">
-            WhatsApp phone (TextMeBot)
+            WhatsApp phone
             <input
               className="field"
               value={whatsappPhone}
@@ -191,7 +191,8 @@ export function PeopleManager({
           </label>
         </div>
         <p className="mt-2 text-xs text-[var(--ink-soft)]">
-          WhatsApp alerts use your server TextMeBot API key. Only the phone number is needed per person.
+          WhatsApp alerts use WAHA / TextMeBot from the server. Only the phone number is needed per
+          person (example +923001234567).
         </p>
         <button type="submit" disabled={loading} className="btn-primary mt-4 w-full sm:w-auto">
           {loading ? "Saving…" : "Create login"}

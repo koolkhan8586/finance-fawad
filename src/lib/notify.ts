@@ -9,6 +9,11 @@ function appUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "https://loan.khanmusa.com").replace(/\/$/, "");
 }
 
+/** Digits only, international format without +. */
+function phoneDigits(phone: string) {
+  return phone.replace(/\D/g, "");
+}
+
 function normalizePhone(phone: string) {
   const trimmed = phone.trim();
   if (trimmed.startsWith("+")) {
@@ -40,7 +45,42 @@ function buildMessage(input: {
   ].join("\n");
 }
 
-/** TextMeBot: one server API key can message any recipient phone. */
+/**
+ * WAHA self-hosted WhatsApp HTTP API
+ * POST {WAHA_URL}/api/sendText
+ * chatId format: 923001234567@c.us
+ */
+async function sendWaha(phone: string, text: string) {
+  const base = process.env.WAHA_URL?.trim().replace(/\/$/, "");
+  if (!base) throw new Error("WAHA_URL not set");
+
+  const session = process.env.WAHA_SESSION?.trim() || "default";
+  const apiKey = process.env.WAHA_API_KEY?.trim();
+  const chatId = `${phoneDigits(phone)}@c.us`;
+
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (apiKey) headers["X-Api-Key"] = apiKey;
+
+  const res = await fetch(`${base}/api/sendText`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      session,
+      chatId,
+      text,
+    }),
+  });
+
+  const body = await res.text().catch(() => "");
+  if (!res.ok) {
+    throw new Error(`WAHA failed (${res.status}): ${body.slice(0, 240)}`);
+  }
+}
+
+/** TextMeBot paid/low-cost gateway */
 async function sendTextMeBot(phone: string, text: string) {
   const apikey = process.env.TEXTMEBOT_APIKEY?.trim();
   if (!apikey) throw new Error("TEXTMEBOT_APIKEY not set");
@@ -55,14 +95,13 @@ async function sendTextMeBot(phone: string, text: string) {
   if (!res.ok) {
     throw new Error(`TextMeBot failed (${res.status}): ${body.slice(0, 200)}`);
   }
-  // TextMeBot often returns 200 with an error string in the body
   const lower = body.toLowerCase();
   if (lower.includes("error") || lower.includes("invalid") || lower.includes("not linked")) {
     throw new Error(`TextMeBot: ${body.slice(0, 200)}`);
   }
 }
 
-/** Legacy CallMeBot (per-user API key) — only if TextMeBot is not configured. */
+/** Legacy CallMeBot (per-user API key) */
 async function sendCallMeBot(phone: string, apikey: string, text: string) {
   const url = new URL("https://api.callmebot.com/whatsapp.php");
   url.searchParams.set("phone", normalizePhone(phone));
@@ -108,7 +147,18 @@ async function notifyPerson(
   subject: string
 ) {
   const phone = person.whatsapp_phone?.trim();
+  const wahaUrl = process.env.WAHA_URL?.trim();
   const textMeKey = process.env.TEXTMEBOT_APIKEY?.trim();
+
+  // Preference: WAHA → TextMeBot → CallMeBot → email
+  if (phone && wahaUrl) {
+    try {
+      await sendWaha(phone, text);
+      return "whatsapp";
+    } catch (err) {
+      console.error("WAHA notify failed for", person.name, err);
+    }
+  }
 
   if (phone && textMeKey) {
     try {
@@ -117,7 +167,9 @@ async function notifyPerson(
     } catch (err) {
       console.error("TextMeBot notify failed for", person.name, err);
     }
-  } else if (phone && person.whatsapp_apikey?.trim()) {
+  }
+
+  if (phone && person.whatsapp_apikey?.trim()) {
     try {
       await sendCallMeBot(phone, person.whatsapp_apikey.trim(), text);
       return "whatsapp";
@@ -181,4 +233,10 @@ export async function notifyBookMembers(input: {
   } catch (err) {
     console.error("notifyBookMembers failed", err);
   }
+}
+
+export function whatsappProviderStatus() {
+  if (process.env.WAHA_URL?.trim()) return "waha";
+  if (process.env.TEXTMEBOT_APIKEY?.trim()) return "textmebot";
+  return "none";
 }

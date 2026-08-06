@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { listUsers } from "@/lib/ledger";
 import { PeopleManager } from "@/components/PeopleManager";
+import { whatsappProviderStatus } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,13 @@ export default async function PeoplePage() {
     whatsapp_phone: u.whatsapp_phone,
   }));
 
-  const textMeConfigured = Boolean(process.env.TEXTMEBOT_APIKEY?.trim());
+  const provider = whatsappProviderStatus();
+  const providerHint =
+    provider === "waha"
+      ? "WhatsApp via WAHA is configured on the server."
+      : provider === "textmebot"
+        ? "WhatsApp via TextMeBot is configured on the server."
+        : "Set WAHA_URL (or TEXTMEBOT_APIKEY) in .env to enable WhatsApp alerts.";
 
   return (
     <main>
@@ -31,8 +38,8 @@ export default async function PeoplePage() {
         </p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl sm:text-4xl">People</h1>
         <p className="mt-2 max-w-xl text-sm text-[var(--ink-soft)] sm:text-base">
-          Create, edit, or remove logins. Add each person’s WhatsApp number for TextMeBot alerts
-          {textMeConfigured ? " (API key is set on the server)." : " — set TEXTMEBOT_APIKEY in .env first."}
+          Create, edit, or remove logins. Add each person’s WhatsApp number for ledger alerts.{" "}
+          {providerHint}
         </p>
       </div>
 

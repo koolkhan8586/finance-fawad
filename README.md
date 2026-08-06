@@ -94,21 +94,41 @@ nano .env
 docker compose up -d --build
 ```
 
-## Notifications (TextMeBot WhatsApp → email fallback)
+## Notifications (WAHA WhatsApp → TextMeBot → email)
 
 When someone adds/edits/deletes an entry, other book members can get a WhatsApp alert.
 
-1. Put your TextMeBot API key in `/opt/musa/.env`:
+### Option A — WAHA (self-hosted WhatsApp API)
+
+1. Start WAHA (sample compose in `deploy/waha.docker-compose.yml`):
 
 ```bash
-TEXTMEBOT_APIKEY=your_textmebot_key
+export WAHA_API_KEY='long-random-secret'
+docker compose -f /opt/musa/deploy/waha.docker-compose.yml up -d
 ```
 
-2. Restart: `systemctl restart musa`
-3. **People → Edit** each person → set WhatsApp phone like `+923001234567`
+2. Open `http://SERVER_IP:3001`, start session `default`, scan QR with WhatsApp.
 
-Loan calls:
+3. In Loan `/opt/musa/.env`:
 
-`https://api.textmebot.com/send.php?recipient=PHONE&apikey=KEY&text=MESSAGE`
+```bash
+WAHA_URL=http://127.0.0.1:3001
+WAHA_API_KEY=long-random-secret
+WAHA_SESSION=default
+```
 
-Optional email fallback if WhatsApp fails — set `SMTP_*` in `.env` (see `.env.example`).
+4. `systemctl restart musa`
+
+5. **People → Edit** → set WhatsApp phone like `+923001234567`
+
+Loan sends: `POST /api/sendText` with `chatId: 923001234567@c.us`.
+
+### Option B — TextMeBot
+
+```bash
+TEXTMEBOT_APIKEY=your_key
+```
+
+### Email fallback
+
+Set `SMTP_*` in `.env` (see `.env.example`) if WhatsApp fails or phone is missing.
