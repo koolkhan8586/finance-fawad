@@ -240,3 +240,170 @@ export function whatsappProviderStatus() {
   if (process.env.TEXTMEBOT_APIKEY?.trim()) return "textmebot";
   return "none";
 }
+
+export type WahaHealth = {
+  configured: boolean;
+  url: string | null;
+  session: string | null;
+  reachable: boolean;
+  connected: boolean;
+  status: string | null;
+  phone: string | null;
+  error: string | null;
+};
+
+export type EmailHealth = {
+  configured: boolean;
+  host: string | null;
+  port: number | null;
+  user: string | null;
+  from: string | null;
+  connected: boolean;
+  error: string | null;
+};
+
+export type TextMeBotHealth = {
+  configured: boolean;
+};
+
+export async function checkWahaHealth(): Promise<WahaHealth> {
+  const base = process.env.WAHA_URL?.trim().replace(/\/$/, "") || null;
+  const session = process.env.WAHA_SESSION?.trim() || "default";
+  const apiKey = process.env.WAHA_API_KEY?.trim();
+
+  if (!base) {
+    return {
+      configured: false,
+      url: null,
+      session: null,
+      reachable: false,
+      connected: false,
+      status: null,
+      phone: null,
+      error: null,
+    };
+  }
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (apiKey) headers["X-Api-Key"] = apiKey;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${base}/api/sessions/${encodeURIComponent(session)}`, {
+      method: "GET",
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    const body = await res.text().catch(() => "");
+    if (!res.ok) {
+      return {
+        configured: true,
+        url: base,
+        session,
+        reachable: true,
+        connected: false,
+        status: null,
+        phone: null,
+        error: `WAHA responded ${res.status}${body ? `: ${body.slice(0, 120)}` : ""}`,
+      };
+    }
+
+    let data: { status?: string; me?: { id?: string; pushName?: string } } = {};
+    try {
+      data = JSON.parse(body);
+    } catch {
+      // ignore
+    }
+
+    const status = data.status || null;
+    const phone = data.me?.id?.replace(/@c\.us$/i, "") || null;
+
+    return {
+      configured: true,
+      url: base,
+      session,
+      reachable: true,
+      connected: status === "WORKING",
+      status,
+      phone,
+      error: status && status !== "WORKING" ? `Session status is ${status}` : null,
+    };
+  } catch (err) {
+    const message =
+      err instanceof Error
+        ? err.name === "AbortError"
+          ? "Timed out reaching WAHA"
+          : err.message
+        : "Could not reach WAHA";
+    return {
+      configured: true,
+      url: base,
+      session,
+      reachable: false,
+      connected: false,
+      status: null,
+      phone: null,
+      error: message,
+    };
+  }
+}
+
+export async function checkEmailHealth(): Promise<EmailHealth> {
+  const host = process.env.SMTP_HOST?.trim() || null;
+  const user = process.env.SMTP_USER?.trim() || null;
+  const pass = process.env.SMTP_PASS?.trim() || null;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const from = process.env.SMTP_FROM?.trim() || user;
+
+  if (!host || !user || !pass) {
+    return {
+      configured: false,
+      host,
+      port: host ? port : null,
+      user,
+      from,
+      connected: false,
+      error: null,
+    };
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: process.env.SMTP_SECURE === "true",
+      auth: { user, pass },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
+    });
+
+    await transporter.verify();
+    return {
+      configured: true,
+      host,
+      port,
+      user,
+      from,
+      connected: true,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      configured: true,
+      host,
+      port,
+      user,
+      from,
+      connected: false,
+      error: err instanceof Error ? err.message.slice(0, 160) : "SMTP verify failed",
+    };
+  }
+}
+
+export function checkTextMeBotHealth(): TextMeBotHealth {
+  return { configured: Boolean(process.env.TEXTMEBOT_APIKEY?.trim()) };
+}
