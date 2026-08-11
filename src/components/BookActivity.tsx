@@ -23,6 +23,12 @@ type TxRow = EditableTransaction & {
   to_user_name?: string | null;
   paid_by_name?: string | null;
   split_with_name?: string | null;
+  attachments?: {
+    id: number;
+    filename: string;
+    webViewLink: string | null;
+    mimeType: string | null;
+  }[];
 };
 
 export function BookActivity({
@@ -30,11 +36,15 @@ export function BookActivity({
   members,
   currentUserId,
   transactions,
+  driveConfigured,
+  driveConnected,
 }: {
   bookId: number;
   members: Member[];
   currentUserId: number;
   transactions: TxRow[];
+  driveConfigured: boolean;
+  driveConnected: boolean;
 }) {
   const [editing, setEditing] = useState<EditableTransaction | null>(null);
 
@@ -67,6 +77,8 @@ export function BookActivity({
           currentUserId={currentUserId}
           editing={editing}
           onCancelEdit={() => setEditing(null)}
+          driveConfigured={driveConfigured}
+          driveConnected={driveConnected}
         />
       </div>
 
@@ -147,6 +159,26 @@ export function BookActivity({
                         {format(new Date(tx.occurred_on + "T12:00:00"), "d MMM yyyy")} ·{" "}
                         {tx.created_by_name}
                       </p>
+                      {tx.attachments && tx.attachments.length > 0 ? (
+                        <ul className="mt-2 flex flex-wrap gap-2">
+                          {tx.attachments.map((att) => (
+                            <li key={att.id}>
+                              {att.webViewLink ? (
+                                <a
+                                  href={att.webViewLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center rounded-lg border border-[var(--line)] bg-white/80 px-2 py-1 text-xs font-medium text-[var(--moss)] hover:bg-white"
+                                >
+                                  📎 {att.filename}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-[var(--ink-soft)]">📎 {att.filename}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-start">
                       <button

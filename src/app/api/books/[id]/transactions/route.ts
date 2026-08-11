@@ -4,12 +4,14 @@ import { requireSession } from "@/lib/auth";
 import {
   addTransaction,
   deleteTransaction,
+  getAttachmentsForDriveCleanup,
   listTransactions,
   updateTransaction,
   userCanAccessBook,
 } from "@/lib/ledger";
 import { getDb } from "@/lib/db";
 import { notifyBookMembers } from "@/lib/notify";
+import { deleteDriveFile } from "@/lib/google-drive";
 import { BASE_CURRENCY, isSupportedCurrency, toPkr } from "@/lib/currency";
 
 const createSchema = z.object({
@@ -250,7 +252,12 @@ export async function DELETE(
     }
 
     const existing = listTransactions(bookId).find((t) => t.id === parsed.data.transactionId);
+    const attachments = getAttachmentsForDriveCleanup(parsed.data.transactionId);
     deleteTransaction(parsed.data.transactionId, bookId);
+
+    for (const att of attachments) {
+      void deleteDriveFile(att.uploaded_by, att.drive_file_id);
+    }
 
     if (existing) {
       void notifyBookMembers({

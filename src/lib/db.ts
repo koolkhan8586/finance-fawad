@@ -35,6 +35,32 @@ function migrate(db: Database.Database) {
   if (!columnExists(db, "transactions", "exchange_rate")) {
     db.exec(`ALTER TABLE transactions ADD COLUMN exchange_rate REAL DEFAULT 1`);
   }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS google_drive_tokens (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      refresh_token TEXT NOT NULL,
+      access_token TEXT,
+      expires_at INTEGER,
+      google_email TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS transaction_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_id INTEGER NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+      uploaded_by INTEGER NOT NULL REFERENCES users(id),
+      drive_file_id TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      mime_type TEXT,
+      size_bytes INTEGER,
+      web_view_link TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_attachments_tx ON transaction_attachments(transaction_id);
+  `);
+
   // Backfill older rows: treat stored amount as PKR
   db.exec(`
     UPDATE transactions

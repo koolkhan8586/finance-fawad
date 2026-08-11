@@ -37,12 +37,16 @@ export function AddTransactionForm({
   currentUserId,
   editing,
   onCancelEdit,
+  driveConfigured,
+  driveConnected,
 }: {
   bookId: number;
   members: Member[];
   currentUserId: number;
   editing?: EditableTransaction | null;
   onCancelEdit?: () => void;
+  driveConfigured: boolean;
+  driveConnected: boolean;
 }) {
   const router = useRouter();
   const other = members.find((m) => m.id !== currentUserId) || members[0];
@@ -61,6 +65,8 @@ export function AddTransactionForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rateLoading, setRateLoading] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState("");
 
   useEffect(() => {
     if (editing) {
@@ -93,6 +99,8 @@ export function AddTransactionForm({
     setPaidByUserId(currentUserId);
     setSplitWithUserId(other?.id || currentUserId);
     setError("");
+    setAttachment(null);
+    setUploadStatus("");
   }, [editing, currentUserId, other?.id]);
 
   const typeHelp = useMemo(() => {
@@ -144,10 +152,24 @@ export function AddTransactionForm({
     }
   }
 
+  async function uploadAttachment(transactionId: number, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/books/${bookId}/transactions/${transactionId}/attachments`, {
+      method: "POST",
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "Could not upload to Google Drive.");
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setUploadStatus("");
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) {
       setError("Enter a valid amount.");
@@ -189,9 +211,30 @@ export function AddTransactionForm({
         setError(data.error || "Could not save");
         return;
       }
+
+      const savedFile = !isEditing ? attachment : null;
+      const txId = isEditing ? editing!.id : Number(data.id);
+
+      if (savedFile && txId) {
+        setUploadStatus("Uploading to Google Drive…");
+        try {
+          await uploadAttachment(txId, savedFile);
+        } catch (uploadErr) {
+          setError(
+            uploadErr instanceof Error
+              ? `${uploadErr.message} Entry was saved without the attachment.`
+              : "Upload failed. Entry was saved without the attachment."
+          );
+          onCancelEdit?.();
+          router.refresh();
+          return;
+        }
+      }
+
       if (!isEditing) {
         setAmount("");
         setDescription("");
+        setAttachment(null);
         if (currency === BASE_CURRENCY) setExchangeRate("");
       }
       onCancelEdit?.();
@@ -401,6 +444,39 @@ export function AddTransactionForm({
           placeholder="JazzCash, dinner, rent help…"
         />
       </label>
+
+      {!isEditing && driveConfigured ? (
+        <div className="mt-3 rounded-xl border border-[var(--line)] bg-white/70 p-3">
+          <label className="block text-sm text-[var(--ink-soft)]">
+            Receipt (optional)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+              className="mt-1 block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--moss)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
+              disabled={!driveConnected || loading}
+              onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          {driveConnected ? (
+            <p className="mt-2 text-xs text-[var(--ink-soft)]">
+              Saved to your Google Drive under <span className="font-medium">Loan</span> — not on
+              this server.
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-[var(--ink-soft)]">
+              <a href="/settings" className="font-medium text-[var(--moss)] hover:underline">
+                Connect Google Drive
+              </a>{" "}
+              to attach receipts.
+            </p>
+          )}
+          {attachment ? (
+            <p className="mt-1 text-xs font-medium text-[var(--ink)]">Selected: {attachment.name}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {uploadStatus ? <p className="mt-3 text-sm text-[var(--moss)]">{uploadStatus}</p> : null}
 
       {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
 

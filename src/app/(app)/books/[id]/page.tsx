@@ -6,9 +6,11 @@ import {
   computeBalances,
   getBook,
   getBookMembers,
+  listAttachmentsForBook,
   listTransactions,
   userCanAccessBook,
 } from "@/lib/ledger";
+import { isDriveConnected, isGoogleDriveConfigured } from "@/lib/google-drive";
 import { BookActivity } from "@/components/BookActivity";
 import { BalanceHero } from "@/components/BalanceHero";
 import type { EditableTransaction } from "@/components/AddTransactionForm";
@@ -35,6 +37,14 @@ export default async function BookPage({
   const members = getBookMembers(bookId);
   const balances = computeBalances(bookId);
   const transactions = listTransactions(bookId);
+  const attachments = listAttachmentsForBook(bookId);
+  const attachmentsByTx = new Map<number, typeof attachments>();
+  for (const att of attachments) {
+    const list = attachmentsByTx.get(att.transaction_id) || [];
+    list.push(att);
+    attachmentsByTx.set(att.transaction_id, list);
+  }
+
   const myBalance = balances.find((b) => b.user_id === session.userId)?.balance ?? 0;
   const other = members.find((m) => m.user_id !== session.userId);
 
@@ -56,7 +66,16 @@ export default async function BookPage({
     to_user_name: tx.to_user_name,
     paid_by_name: tx.paid_by_name,
     split_with_name: tx.split_with_name,
+    attachments: (attachmentsByTx.get(tx.id) || []).map((a) => ({
+      id: a.id,
+      filename: a.filename,
+      webViewLink: a.web_view_link,
+      mimeType: a.mime_type,
+    })),
   }));
+
+  const driveConfigured = isGoogleDriveConfigured();
+  const driveConnected = driveConfigured && isDriveConnected(session.userId);
 
   return (
     <main>
@@ -86,6 +105,8 @@ export default async function BookPage({
         members={members.map((m) => ({ id: m.user_id, name: m.name }))}
         currentUserId={session.userId}
         transactions={txRows}
+        driveConfigured={driveConfigured}
+        driveConnected={driveConnected}
       />
     </main>
   );
