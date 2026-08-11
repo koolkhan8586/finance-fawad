@@ -72,3 +72,15 @@ export interface SessionPayload {
   name: string;
   role: UserRole;
 }
+
+export interface TransactionAttachment {
+  id: number;
+  transaction_id: number;
+  uploaded_by: number;
+  drive_file_id: string;
+  filename: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  web_view_link: string | null;
+  created_at: string;
+}

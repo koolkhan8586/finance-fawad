@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { getDb } from "./db";
-import type { Book, BookBalance, BookMember, Transaction, User } from "./types";
+import type { Book, BookBalance, BookMember, Transaction, TransactionAttachment, User } from "./types";
 
 export function listUsers(): User[] {
   const db = getDb();
@@ -294,6 +294,76 @@ export function addTransaction(input: {
 export function deleteTransaction(id: number, bookId: number) {
   const db = getDb();
   return db.prepare(`DELETE FROM transactions WHERE id = ? AND book_id = ?`).run(id, bookId);
+}
+
+export function getTransaction(id: number, bookId: number): Transaction | null {
+  const db = getDb();
+  return (
+    (db
+      .prepare(
+        `SELECT * FROM transactions WHERE id = ? AND book_id = ?`
+      )
+      .get(id, bookId) as Transaction | undefined) ?? null
+  );
+}
+
+export function addTransactionAttachment(input: {
+  transactionId: number;
+  uploadedBy: number;
+  driveFileId: string;
+  filename: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  webViewLink?: string;
+}) {
+  const db = getDb();
+  const result = db
+    .prepare(
+      `INSERT INTO transaction_attachments (
+         transaction_id, uploaded_by, drive_file_id, filename, mime_type, size_bytes, web_view_link
+       ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      input.transactionId,
+      input.uploadedBy,
+      input.driveFileId,
+      input.filename,
+      input.mimeType ?? null,
+      input.sizeBytes ?? null,
+      input.webViewLink ?? null
+    );
+  return Number(result.lastInsertRowid);
+}
+
+export function listAttachmentsForBook(bookId: number): TransactionAttachment[] {
+  const db = getDb();
+  return db
+    .prepare(
+      `SELECT a.*
+       FROM transaction_attachments a
+       JOIN transactions t ON t.id = a.transaction_id
+       WHERE t.book_id = ?
+       ORDER BY a.id ASC`
+    )
+    .all(bookId) as TransactionAttachment[];
+}
+
+export function listAttachmentsForTransaction(transactionId: number): TransactionAttachment[] {
+  const db = getDb();
+  return db
+    .prepare(
+      `SELECT * FROM transaction_attachments WHERE transaction_id = ? ORDER BY id ASC`
+    )
+    .all(transactionId) as TransactionAttachment[];
+}
+
+export function getAttachmentsForDriveCleanup(transactionId: number) {
+  const db = getDb();
+  return db
+    .prepare(
+      `SELECT drive_file_id, uploaded_by FROM transaction_attachments WHERE transaction_id = ?`
+    )
+    .all(transactionId) as { drive_file_id: string; uploaded_by: number }[];
 }
 
 export function updateTransaction(input: {

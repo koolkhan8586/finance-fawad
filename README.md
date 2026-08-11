@@ -132,3 +132,22 @@ TEXTMEBOT_APIKEY=your_key
 ### Email fallback
 
 Set `SMTP_*` in `.env` (see `.env.example`) if WhatsApp fails or phone is missing.
+
+## Google Drive receipts (optional)
+
+When adding an entry you can attach a receipt (image or PDF). Files are uploaded **directly to your Google Drive** — nothing is stored on the Loan server.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable **Google Drive API**.
+2. OAuth consent screen → add scope `https://www.googleapis.com/auth/drive.file`.
+3. Create **OAuth client ID** (Web application). Authorized redirect URI:
+   `https://loan.khanmusa.com/api/google-drive/callback`
+4. Add to `/opt/musa/.env`:
+
+```bash
+GOOGLE_CLIENT_ID=....apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://loan.khanmusa.com/api/google-drive/callback
+```
+
+5. Restart the app, then **Settings → Connect Google Drive** and sign in.
+6. When adding an entry, use the optional **Receipt** field. Files appear in Drive under `Loan/{book name}/`.

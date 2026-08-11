@@ -40,6 +40,12 @@ export default async function AppLayout({
                 People
               </Link>
             ) : null}
+            <Link
+              href="/settings"
+              className="rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
+            >
+              Settings
+            </Link>
             <span className="hidden max-w-[9rem] truncate text-[var(--ink)] sm:inline">
               {session.name}
             </span>
