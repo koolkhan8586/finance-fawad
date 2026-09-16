@@ -31,6 +31,8 @@ export interface BookMember {
   user_id: number;
   name: string;
   username: string;
+  /** When true, this member may add/edit/delete entries in the book */
+  can_write: boolean;
   email?: string | null;
   whatsapp_phone?: string | null;
   whatsapp_apikey?: string | null;

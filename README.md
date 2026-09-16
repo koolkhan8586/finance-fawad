@@ -6,6 +6,7 @@ Shared money books for family and friends. Track loans, repayments, and shared e
 
 - **Admin login** (you) creates accounts for brother / friends
 - **Shared books** — each person only sees books they’re in
+- **Entry rights** — admin chooses who may add/edit entries in each book
 - **Transaction types:** gave money, received / repayment, shared expense (50/50), settlement, adjustment
 - Live balance: who owes whom
 

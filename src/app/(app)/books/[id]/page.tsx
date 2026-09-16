@@ -8,10 +8,13 @@ import {
   getBookMembers,
   listAttachmentsForBook,
   listTransactions,
+  listUsers,
   userCanAccessBook,
+  userCanWriteBook,
 } from "@/lib/ledger";
 import { isDriveConnected, isGoogleDriveConfigured } from "@/lib/google-drive";
 import { BookActivity } from "@/components/BookActivity";
+import { BookMembersManager } from "@/components/BookMembersManager";
 import { BalanceHero } from "@/components/BalanceHero";
 import type { EditableTransaction } from "@/components/AddTransactionForm";
 
@@ -47,6 +50,13 @@ export default async function BookPage({
 
   const myBalance = balances.find((b) => b.user_id === session.userId)?.balance ?? 0;
   const other = members.find((m) => m.user_id !== session.userId);
+  const canWrite = userCanWriteBook(session.userId, session.role, bookId);
+  const isAdmin = session.role === "admin";
+  const allPeople = isAdmin
+    ? listUsers()
+        .filter((u) => u.id !== session.userId)
+        .map((u) => ({ id: u.id, name: u.name }))
+    : [];
 
   const txRows = transactions.map((tx) => ({
     id: tx.id,
@@ -100,6 +110,20 @@ export default async function BookPage({
         />
       </div>
 
+      {isAdmin ? (
+        <BookMembersManager
+          bookId={bookId}
+          creatorId={book.created_by}
+          members={members.map((m) => ({
+            id: m.user_id,
+            name: m.name,
+            username: m.username,
+            can_write: m.can_write,
+          }))}
+          people={allPeople}
+        />
+      ) : null}
+
       <BookActivity
         bookId={bookId}
         members={members.map((m) => ({ id: m.user_id, name: m.name }))}
@@ -107,6 +131,7 @@ export default async function BookPage({
         transactions={txRows}
         driveConfigured={driveConfigured}
         driveConnected={driveConnected}
+        canWrite={canWrite}
       />
     </main>
   );
