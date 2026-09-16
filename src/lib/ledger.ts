@@ -174,16 +174,21 @@ export function getBook(bookId: number): Book | null {
 
 export function getBookMembers(bookId: number): BookMember[] {
   const db = getDb();
-  return db
+  const rows = db
     .prepare(
-      `SELECT bm.book_id, bm.user_id, u.name, u.username,
+      `SELECT bm.book_id, bm.user_id, bm.can_write, u.name, u.username,
               u.email, u.whatsapp_phone, u.whatsapp_apikey
        FROM book_members bm
        JOIN users u ON u.id = bm.user_id
        WHERE bm.book_id = ?
        ORDER BY u.name ASC`
     )
-    .all(bookId) as BookMember[];
+    .all(bookId) as (Omit<BookMember, "can_write"> & { can_write: number })[];
+
+  return rows.map((row) => ({
+    ...row,
+    can_write: Boolean(row.can_write),
+  }));
 }
 
 export function userCanAccessBook(userId: number, role: string, bookId: number) {
@@ -195,11 +200,26 @@ export function userCanAccessBook(userId: number, role: string, bookId: number) 
   return Boolean(row);
 }
 
+/** Admins always write; other users need membership with can_write. */
+export function userCanWriteBook(userId: number, role: string, bookId: number) {
+  if (role === "admin") return true;
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT 1 AS ok FROM book_members
+       WHERE book_id = ? AND user_id = ? AND can_write = 1`
+    )
+    .get(bookId, userId);
+  return Boolean(row);
+}
+
 export function createBook(input: {
   title: string;
   description?: string;
   createdBy: number;
   memberIds: number[];
+  /** People who may add entries. Defaults to all memberIds (+ creator). */
+  writerIds?: number[];
 }) {
   const db = getDb();
   const create = db.transaction(() => {
@@ -211,15 +231,64 @@ export function createBook(input: {
 
     const bookId = Number(result.lastInsertRowid);
     const insertMember = db.prepare(
-      `INSERT INTO book_members (book_id, user_id) VALUES (?, ?)`
+      `INSERT INTO book_members (book_id, user_id, can_write) VALUES (?, ?, ?)`
     );
     const uniqueMembers = Array.from(new Set([input.createdBy, ...input.memberIds]));
+    const writers = new Set(
+      input.writerIds
+        ? [input.createdBy, ...input.writerIds]
+        : uniqueMembers
+    );
     for (const memberId of uniqueMembers) {
-      insertMember.run(bookId, memberId);
+      insertMember.run(bookId, memberId, writers.has(memberId) ? 1 : 0);
     }
     return bookId;
   });
   return create();
+}
+
+export function setBookMemberWriteAccess(
+  bookId: number,
+  userId: number,
+  canWrite: boolean
+) {
+  const db = getDb();
+  const result = db
+    .prepare(
+      `UPDATE book_members SET can_write = ? WHERE book_id = ? AND user_id = ?`
+    )
+    .run(canWrite ? 1 : 0, bookId, userId);
+  return result.changes > 0;
+}
+
+export function addBookMember(
+  bookId: number,
+  userId: number,
+  canWrite: boolean = true
+) {
+  const db = getDb();
+  const existing = db
+    .prepare(`SELECT 1 AS ok FROM book_members WHERE book_id = ? AND user_id = ?`)
+    .get(bookId, userId);
+  if (existing) {
+    return setBookMemberWriteAccess(bookId, userId, canWrite);
+  }
+  db.prepare(
+    `INSERT INTO book_members (book_id, user_id, can_write) VALUES (?, ?, ?)`
+  ).run(bookId, userId, canWrite ? 1 : 0);
+  return true;
+}
+
+export function removeBookMember(bookId: number, userId: number) {
+  const db = getDb();
+  const book = getBook(bookId);
+  if (book && book.created_by === userId) {
+    throw new Error("CANNOT_REMOVE_CREATOR");
+  }
+  const result = db
+    .prepare(`DELETE FROM book_members WHERE book_id = ? AND user_id = ?`)
+    .run(bookId, userId);
+  return result.changes > 0;
 }
 
 export function listTransactions(bookId: number): Transaction[] {

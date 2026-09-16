@@ -38,6 +38,7 @@ export function BookActivity({
   transactions,
   driveConfigured,
   driveConnected,
+  canWrite,
 }: {
   bookId: number;
   members: Member[];
@@ -45,10 +46,12 @@ export function BookActivity({
   transactions: TxRow[];
   driveConfigured: boolean;
   driveConnected: boolean;
+  canWrite: boolean;
 }) {
   const [editing, setEditing] = useState<EditableTransaction | null>(null);
 
   function startEdit(tx: TxRow) {
+    if (!canWrite) return;
     setEditing({
       id: tx.id,
       type: tx.type,
@@ -70,17 +73,23 @@ export function BookActivity({
 
   return (
     <>
-      <div className="fade-up-delay mt-5 sm:mt-8">
-        <AddTransactionForm
-          bookId={bookId}
-          members={members}
-          currentUserId={currentUserId}
-          editing={editing}
-          onCancelEdit={() => setEditing(null)}
-          driveConfigured={driveConfigured}
-          driveConnected={driveConnected}
-        />
-      </div>
+      {canWrite ? (
+        <div className="fade-up-delay mt-5 sm:mt-8">
+          <AddTransactionForm
+            bookId={bookId}
+            members={members}
+            currentUserId={currentUserId}
+            editing={editing}
+            onCancelEdit={() => setEditing(null)}
+            driveConfigured={driveConfigured}
+            driveConnected={driveConnected}
+          />
+        </div>
+      ) : (
+        <p className="fade-up-delay surface mt-5 rounded-2xl px-4 py-4 text-sm text-[var(--ink-soft)] sm:mt-8 sm:px-5">
+          You can view this book. Ask an admin to give you permission if you need to add entries.
+        </p>
+      )}
 
       <section className="fade-up-delay-2 mt-8 sm:mt-10">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -93,7 +102,8 @@ export function BookActivity({
         </div>
         {transactions.length === 0 ? (
           <p className="surface mt-4 rounded-2xl px-4 py-8 text-[var(--ink-soft)] sm:px-5">
-            No transactions yet. Add the first one above.
+            No transactions yet.
+            {canWrite ? " Add the first one above." : ""}
           </p>
         ) : (
           <ul className="mt-4 space-y-2">
@@ -180,16 +190,18 @@ export function BookActivity({
                         </ul>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-start">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(tx)}
-                        className="text-xs font-medium text-[var(--moss)] hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <DeleteTransactionButton bookId={bookId} transactionId={tx.id} />
-                    </div>
+                    {canWrite ? (
+                      <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-start">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(tx)}
+                          className="text-xs font-medium text-[var(--moss)] hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <DeleteTransactionButton bookId={bookId} transactionId={tx.id} />
+                      </div>
+                    ) : null}
                   </div>
                 </li>
               );

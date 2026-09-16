@@ -8,6 +8,7 @@ import {
   listTransactions,
   updateTransaction,
   userCanAccessBook,
+  userCanWriteBook,
 } from "@/lib/ledger";
 import { getDb } from "@/lib/db";
 import { notifyBookMembers } from "@/lib/notify";
@@ -65,6 +66,12 @@ export async function POST(
     const bookId = Number(id);
     if (!userCanAccessBook(session.userId, session.role, bookId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!userCanWriteBook(session.userId, session.role, bookId)) {
+      return NextResponse.json(
+        { error: "You do not have permission to add entries in this book." },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => null);
@@ -152,6 +159,12 @@ export async function PATCH(
     const bookId = Number(id);
     if (!userCanAccessBook(session.userId, session.role, bookId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!userCanWriteBook(session.userId, session.role, bookId)) {
+      return NextResponse.json(
+        { error: "You do not have permission to edit entries in this book." },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => null);
@@ -243,6 +256,12 @@ export async function DELETE(
     const bookId = Number(id);
     if (!userCanAccessBook(session.userId, session.role, bookId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!userCanWriteBook(session.userId, session.role, bookId)) {
+      return NextResponse.json(
+        { error: "You do not have permission to delete entries in this book." },
+        { status: 403 }
+      );
     }
 
     const body = await request.json().catch(() => null);

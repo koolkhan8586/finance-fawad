@@ -5,6 +5,7 @@ import {
   addTransactionAttachment,
   getTransaction,
   userCanAccessBook,
+  userCanWriteBook,
 } from "@/lib/ledger";
 import {
   isDriveConnected,
@@ -25,6 +26,12 @@ export async function POST(
 
     if (!userCanAccessBook(session.userId, session.role, bookId)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!userCanWriteBook(session.userId, session.role, bookId)) {
+      return NextResponse.json(
+        { error: "You do not have permission to add entries in this book." },
+        { status: 403 }
+      );
     }
 
     if (!isDriveConnected(session.userId)) {

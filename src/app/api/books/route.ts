@@ -36,6 +36,8 @@ const createSchema = z.object({
   title: z.string().min(2).max(80),
   description: z.string().max(300).optional(),
   memberIds: z.array(z.number().int().positive()).min(1),
+  /** People allowed to add entries. Defaults to all memberIds. */
+  writerIds: z.array(z.number().int().positive()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -47,11 +49,20 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Title and at least one member are required." }, { status: 400 });
     }
+    const writerIds = parsed.data.writerIds ?? parsed.data.memberIds;
+    const invalidWriters = writerIds.filter((id) => !parsed.data.memberIds.includes(id));
+    if (invalidWriters.length) {
+      return NextResponse.json(
+        { error: "People who can add entries must also be shared on the book." },
+        { status: 400 }
+      );
+    }
     const id = createBook({
       title: parsed.data.title,
       description: parsed.data.description,
       createdBy: session.userId,
       memberIds: parsed.data.memberIds,
+      writerIds,
     });
     return NextResponse.json({ id }, { status: 201 });
   } catch (e) {

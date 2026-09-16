@@ -12,12 +12,26 @@ export function CreateBookForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [memberIds, setMemberIds] = useState<number[]>([]);
+  const [writerIds, setWriterIds] = useState<number[]>([]);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function toggleMember(id: number) {
-    setMemberIds((prev) =>
+    setMemberIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      setWriterIds((writers) => {
+        if (!next.includes(id)) return writers.filter((x) => x !== id);
+        // Newly shared people can add entries by default
+        return writers.includes(id) ? writers : [...writers, id];
+      });
+      return next;
+    });
+  }
+
+  function toggleWriter(id: number) {
+    if (!memberIds.includes(id)) return;
+    setWriterIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
@@ -30,7 +44,7 @@ export function CreateBookForm({
       const res = await fetch("/api/books", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, memberIds }),
+        body: JSON.stringify({ title, description, memberIds, writerIds }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -40,6 +54,7 @@ export function CreateBookForm({
       setTitle("");
       setDescription("");
       setMemberIds([]);
+      setWriterIds([]);
       setOpen(false);
       router.push(`/books/${data.id}`);
       router.refresh();
@@ -106,6 +121,36 @@ export function CreateBookForm({
           )}
         </div>
       </fieldset>
+      {memberIds.length > 0 ? (
+        <fieldset className="mt-4">
+          <legend className="text-sm text-[var(--ink-soft)]">
+            Who can also add entries
+          </legend>
+          <p className="mt-1 text-xs text-[var(--ink-soft)]">
+            Turn this on for people who should record money themselves. Others can still view the book.
+          </p>
+          <div className="mt-2 space-y-2">
+            {members
+              .filter((m) => memberIds.includes(m.id))
+              .map((m) => {
+                const canWrite = writerIds.includes(m.id);
+                return (
+                  <label
+                    key={m.id}
+                    className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--line)] bg-white/70 px-3 py-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={canWrite}
+                      onChange={() => toggleWriter(m.id)}
+                    />
+                    <span>{m.name}</span>
+                  </label>
+                );
+              })}
+          </div>
+        </fieldset>
+      ) : null}
       {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <button

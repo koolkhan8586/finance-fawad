@@ -35,6 +35,10 @@ function migrate(db: Database.Database) {
   if (!columnExists(db, "transactions", "exchange_rate")) {
     db.exec(`ALTER TABLE transactions ADD COLUMN exchange_rate REAL DEFAULT 1`);
   }
+  if (!columnExists(db, "book_members", "can_write")) {
+    // Existing members keep write access; admin can revoke later.
+    db.exec(`ALTER TABLE book_members ADD COLUMN can_write INTEGER NOT NULL DEFAULT 1`);
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS google_drive_tokens (
@@ -100,6 +104,7 @@ function createDb() {
     CREATE TABLE IF NOT EXISTS book_members (
       book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      can_write INTEGER NOT NULL DEFAULT 1,
       PRIMARY KEY (book_id, user_id)
     );
 
