@@ -21,6 +21,8 @@ type Summary = {
   byCategory: { category: string; total: number }[];
 };
 
+const CUSTOM = "__custom__";
+
 export function PersonalExpensesManager({
   expenses,
   summary,
@@ -30,7 +32,8 @@ export function PersonalExpensesManager({
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<string>(PERSONAL_CATEGORIES[0]);
+  const [categorySelect, setCategorySelect] = useState<string>(PERSONAL_CATEGORIES[0]);
+  const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [occurredOn, setOccurredOn] = useState(todayISODate());
   const [error, setError] = useState("");
@@ -38,18 +41,34 @@ export function PersonalExpensesManager({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filter, setFilter] = useState("all");
 
+  const allCategories = useMemo(() => {
+    const fromHistory = expenses.map((e) => e.category);
+    return Array.from(new Set([...PERSONAL_CATEGORIES, ...fromHistory]));
+  }, [expenses]);
+
   const filtered = useMemo(() => {
     if (filter === "all") return expenses;
     return expenses.filter((e) => e.category === filter);
   }, [expenses, filter]);
+
+  function resolvedCategory() {
+    if (categorySelect === CUSTOM) return customCategory.trim();
+    return categorySelect.trim();
+  }
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
     const value = Number(amount);
+    const category = resolvedCategory();
     if (!Number.isFinite(value) || value <= 0) {
       setError("Enter a valid amount.");
+      setLoading(false);
+      return;
+    }
+    if (!category) {
+      setError("Enter a category name.");
       setLoading(false);
       return;
     }
@@ -71,6 +90,10 @@ export function PersonalExpensesManager({
       }
       setAmount("");
       setDescription("");
+      setCustomCategory("");
+      if (categorySelect === CUSTOM) {
+        setCategorySelect(category);
+      }
       router.refresh();
     } catch {
       setError("Network error");
@@ -82,7 +105,13 @@ export function PersonalExpensesManager({
   function startEdit(exp: Expense) {
     setEditingId(exp.id);
     setAmount(String(exp.amount));
-    setCategory(exp.category);
+    if (allCategories.includes(exp.category)) {
+      setCategorySelect(exp.category);
+      setCustomCategory("");
+    } else {
+      setCategorySelect(CUSTOM);
+      setCustomCategory(exp.category);
+    }
     setDescription(exp.description || "");
     setOccurredOn(exp.occurred_on);
   }
@@ -90,7 +119,8 @@ export function PersonalExpensesManager({
   function cancelEdit() {
     setEditingId(null);
     setAmount("");
-    setCategory(PERSONAL_CATEGORIES[0]);
+    setCategorySelect(PERSONAL_CATEGORIES[0]);
+    setCustomCategory("");
     setDescription("");
     setOccurredOn(todayISODate());
   }
@@ -100,6 +130,12 @@ export function PersonalExpensesManager({
     if (!editingId) return;
     setLoading(true);
     setError("");
+    const category = resolvedCategory();
+    if (!category) {
+      setError("Enter a category name.");
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/expenses", {
         method: "PATCH",
@@ -217,16 +253,37 @@ export function PersonalExpensesManager({
             Category
             <select
               className="field"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={
+                categorySelect === CUSTOM || allCategories.includes(categorySelect)
+                  ? categorySelect
+                  : CUSTOM
+              }
+              onChange={(e) => {
+                setCategorySelect(e.target.value);
+                if (e.target.value !== CUSTOM) setCustomCategory("");
+              }}
             >
-              {PERSONAL_CATEGORIES.map((c) => (
+              {allCategories.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
               ))}
+              <option value={CUSTOM}>+ Add new category…</option>
             </select>
           </label>
+          {categorySelect === CUSTOM ? (
+            <label className="text-sm text-[var(--ink-soft)] sm:col-span-2">
+              New category name
+              <input
+                className="field"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                placeholder="e.g. Petrol, Zakat, Gym"
+                required
+                autoFocus
+              />
+            </label>
+          ) : null}
           <label className="text-sm text-[var(--ink-soft)]">
             Date
             <input
@@ -273,7 +330,7 @@ export function PersonalExpensesManager({
             onChange={(e) => setFilter(e.target.value)}
           >
             <option value="all">All categories</option>
-            {PERSONAL_CATEGORIES.map((c) => (
+            {allCategories.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
