@@ -111,7 +111,7 @@ export function AppHeader({
             onClick={() => setOpen(false)}
           />
           <aside
-            className="absolute inset-y-0 left-0 flex w-[min(18rem,86vw)] flex-col border-r border-[var(--line)] bg-[var(--paper,#f7f4ec)] shadow-xl"
+            className="absolute inset-y-0 left-0 flex w-[min(18rem,86vw)] flex-col border-r border-[var(--line)] bg-[var(--paper)] shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-label="Main menu"
