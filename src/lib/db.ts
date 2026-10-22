@@ -63,6 +63,42 @@ function migrate(db: Database.Database) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_attachments_tx ON transaction_attachments(transaction_id);
+
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      event_date TEXT,
+      created_by INTEGER NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS event_budget_lines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      category TEXT NOT NULL,
+      planned_amount REAL NOT NULL DEFAULT 0 CHECK(planned_amount >= 0),
+      actual_amount REAL NOT NULL DEFAULT 0 CHECK(actual_amount >= 0),
+      notes TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS personal_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount REAL NOT NULL CHECK(amount >= 0),
+      currency TEXT NOT NULL DEFAULT 'PKR',
+      category TEXT NOT NULL,
+      description TEXT,
+      occurred_on TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_events_user ON events(created_by, event_date DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_event_lines ON event_budget_lines(event_id, sort_order, id);
+    CREATE INDEX IF NOT EXISTS idx_personal_expenses_user
+      ON personal_expenses(user_id, occurred_on DESC, id DESC);
   `);
 
   // Backfill older rows: treat stored amount as PKR

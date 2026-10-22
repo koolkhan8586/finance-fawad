@@ -25,28 +25,40 @@ export default async function AppLayout({
           >
             Loan
           </Link>
-          <nav className="flex items-center gap-2 text-sm font-medium text-[var(--ink-soft)] sm:gap-4">
+          <nav className="flex max-w-[calc(100vw-7rem)] items-center gap-1 overflow-x-auto text-sm font-medium text-[var(--ink-soft)] sm:max-w-none sm:gap-3">
             <Link
               href="/dashboard"
-              className="rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
+              className="shrink-0 rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
             >
               Books
+            </Link>
+            <Link
+              href="/events"
+              className="shrink-0 rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
+            >
+              Events
+            </Link>
+            <Link
+              href="/expenses"
+              className="shrink-0 rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
+            >
+              Expenses
             </Link>
             {session.role === "admin" ? (
               <Link
                 href="/people"
-                className="rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
+                className="shrink-0 rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
               >
                 People
               </Link>
             ) : null}
             <Link
               href="/settings"
-              className="rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
+              className="shrink-0 rounded-lg px-2 py-2 hover:bg-white/60 hover:text-[var(--ink)] sm:px-3"
             >
               Settings
             </Link>
-            <span className="hidden max-w-[9rem] truncate text-[var(--ink)] sm:inline">
+            <span className="hidden max-w-[9rem] shrink-0 truncate text-[var(--ink)] sm:inline">
               {session.name}
             </span>
             <LogoutButton />

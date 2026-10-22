@@ -75,6 +75,39 @@ export interface SessionPayload {
   role: UserRole;
 }
 
+export interface EventItem {
+  id: number;
+  title: string;
+  description: string | null;
+  event_date: string | null;
+  created_by: number;
+  created_at: string;
+  planned_total?: number;
+  actual_total?: number;
+}
+
+export interface EventBudgetLine {
+  id: number;
+  event_id: number;
+  category: string;
+  planned_amount: number;
+  actual_amount: number;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface PersonalExpense {
+  id: number;
+  user_id: number;
+  amount: number;
+  currency: string;
+  category: string;
+  description: string | null;
+  occurred_on: string;
+  created_at: string;
+}
+
 export interface TransactionAttachment {
   id: number;
   transaction_id: number;
